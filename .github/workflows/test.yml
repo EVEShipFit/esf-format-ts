@@ -1,0 +1,66 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["22", "24", "26"]
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Check out esf-format
+        uses: actions/checkout@v7
+        with:
+          repository: EVEShipFit/esf-format
+          ref: v1.0
+          path: esf-format
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run the test cases
+        run: uv run --project esf-format/tools esf-test -- node tests/program.ts
+
+      - name: Run the unit tests
+        run: npm test
+
+      - name: Report coverage
+        run: |
+          { echo '```'; cat coverage/coverage.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
