@@ -1,0 +1,50 @@
+{
+  "name": "@eveshipfit/esf-format",
+  "version": "0.0.0-git",
+  "description": "Read and write esf/1, the plain-text format for EVE Online ship fits",
+  "keywords": [
+    "eve-online",
+    "fitting",
+    "esf"
+  ],
+  "homepage": "https://github.com/EVEShipFit/esf-format-ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EVEShipFit/esf-format-ts.git"
+  },
+  "license": "MIT",
+  "author": "EVEShipFit Team <info@eveship.fit>",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "tsc && eslint . && prettier --check .",
+    "fix": "eslint --fix . && prettier --write .",
+    "test": "vitest run --coverage"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^10.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.0.5"
+  }
+}
