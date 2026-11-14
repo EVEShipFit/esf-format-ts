@@ -75,7 +75,8 @@ export type Hold =
  * An item goes where its `Kind` says, so most entries leave this out. Set it to store an
  * item somewhere else, like a spare Damage Control II in `"cargo"`.
  *
- * - A {@link Rack}, like `"high"`, is only for empty slots. An item never names its rack.
+ * - A {@link Rack}, like `"high"`, is for empty slots, and for an item put in a given
+ *   `slot`. Otherwise, an item never names its rack.
  * - `"cargo"` is the cargo hold.
  * - `"bay"` is the drone bay or fighter bay, for drones and fighters that are not out in
  *   space or in a tube.
@@ -88,7 +89,8 @@ export type Location = Rack | "cargo" | "bay" | Hold;
  * One line of a fit: an item, an empty slot, or another fit carried by this one.
  *
  * Only `type` is needed; every other field is left out when it is the default.
- * Entries can be in any order, except within a rack: there, the order is the slot order.
+ * Entries can be in any order, except within a rack: there, the order is the slot order,
+ * unless an entry sets `slot`.
  */
 export interface Entry {
   /**
@@ -143,6 +145,15 @@ export interface Entry {
   state?: State;
   /** Where the item goes. Left out means where its type goes by default; see {@link Location}. */
   location?: Location;
+  /**
+   * The slot in the `location` rack, counting from 1, like 3 for the third high slot.
+   *
+   * Set `location` to the rack too; the item must go in that rack. It cannot be combined
+   * with `count`, and each slot can be pinned only once. Left out means the next free
+   * slot. `load()` never sets this: it gives the rack in slot order, with empty slots in
+   * between.
+   */
+  slot?: number;
 }
 
 /** `T` with every optional field also allowed to be undefined. */

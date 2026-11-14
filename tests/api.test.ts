@@ -143,7 +143,39 @@ test.each<[string, EsfFit[], string]>([
     [fit({ type: DAMAGE_CONTROL, overrides: { 999_999: 1 } })],
     "unknown attribute ID",
   ],
-  ["rack on an item", [fit({ type: AUTOCANNON, location: "high" })], "only for an empty slot"],
+  ["rack on an item", [fit({ type: AUTOCANNON, location: "high" })], "only to pin a slot"],
+  ["slot zero", [fit({ type: AUTOCANNON, location: "high", slot: 0 })], "at least 1"],
+  ["fractional slot", [fit({ type: AUTOCANNON, location: "high", slot: 1.5 })], "a whole number"],
+  ["slot too large", [fit({ type: AUTOCANNON, location: "high", slot: 2 ** 32 })], "too large"],
+  ["slot NaN", [fit({ type: AUTOCANNON, location: "high", slot: NaN })], "a whole number"],
+  ["huge slot", [fit({ type: AUTOCANNON, location: "high", slot: 1e21 })], "a whole number"],
+  ["slot without a rack", [fit({ type: AUTOCANNON, slot: 1 })], "needs the rack"],
+  [
+    "unknown location with a slot",
+    [fit({ type: AUTOCANNON, location: "nope" as Location, slot: 1 })],
+    "unknown location nope",
+  ],
+  [
+    "slot with a count",
+    [fit({ type: AUTOCANNON, count: 2, location: "high", slot: 1 })],
+    "mutually exclusive",
+  ],
+  [
+    "slot in the wrong rack",
+    [fit({ type: AUTOCANNON, location: "low", slot: 1 })],
+    "does not go in the low rack",
+  ],
+  ["slot in a hold", [fit({ type: EMP, location: "cargo", slot: 1 })], "needs the rack"],
+  [
+    "slot twice",
+    [
+      fit(
+        { type: AUTOCANNON, location: "high", slot: 1 },
+        { type: AUTOCANNON, location: "high", slot: 1 },
+      ),
+    ],
+    "pinned twice",
+  ],
   ["charge count alone", [fit({ type: AUTOCANNON, chargeCount: 10 })], "without a charge"],
   ["override NaN", [fit({ type: DAMAGE_CONTROL, overrides: { 50: NaN } })], "not finite"],
   ["override infinite", [fit({ type: DAMAGE_CONTROL, overrides: { 50: Infinity } })], "not finite"],
@@ -329,6 +361,33 @@ test("pinned slots leave the rest in order", () => {
       "Damage Control II\n" +
       "Overdrive Injector System II\n",
   );
+});
+
+test("save pins slots", () => {
+  const pinned = fit(
+    { type: AUTOCANNON },
+    { type: AUTOCANNON, location: "high", slot: 3 },
+    { location: "low", slot: 1 },
+    { type: DAMAGE_CONTROL },
+  );
+  const text = save([pinned], catalog);
+  expect(text).toBe(
+    "%esf/1\nRifter\n\n" +
+      "200mm AutoCannon II\n" +
+      "- @high\n" +
+      "200mm AutoCannon II\n" +
+      "\n" +
+      "- @low\n" +
+      "Damage Control II\n",
+  );
+  expect(load(text, catalog)[0]?.entries).toStrictEqual([
+    { type: AUTOCANNON },
+    { location: "high" },
+    { type: AUTOCANNON },
+    { location: "low" },
+    { type: DAMAGE_CONTROL },
+  ]);
+  expect(load(saveBinary([pinned], catalog), catalog)).toStrictEqual(load(text, catalog));
 });
 
 test("a catalog with attribute names that fold the same", () => {
