@@ -2,7 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import {
-  fold,
+  sde,
   type AttributeRecord,
   type Catalog,
   type Kind,
@@ -29,20 +29,6 @@ interface Data {
   mutaplasmids: { base: number; mutaplasmid: number; rolls: [number, number][] }[];
 }
 
-function byName(entries: Named[]): Map<string, number> {
-  const index = new Map<string, number>();
-  const sorted = entries.toSorted(
-    (a, b) => Number(b.published) - Number(a.published) || a.id - b.id,
-  );
-  for (const e of sorted) {
-    const folded = fold(e.name);
-    if (!index.has(folded)) {
-      index.set(folded, e.id);
-    }
-  }
-  return index;
-}
-
 export class JsonCatalog implements Catalog {
   private readonly types = new Map<number, TypeRecord>();
   private readonly attributes = new Map<number, AttributeRecord>();
@@ -64,8 +50,18 @@ export class JsonCatalog implements Catalog {
     for (const { id, name } of data.attributes) {
       this.attributes.set(id, { id, name });
     }
-    this.typeNames = byName(data.types);
-    this.attributeNames = byName(data.attributes);
+    this.typeNames = sde.nameIndex(
+      data.types,
+      (t) => t.id,
+      (t) => t.name,
+      (t) => t.published,
+    );
+    this.attributeNames = sde.nameIndex(
+      data.attributes,
+      (a) => a.id,
+      (a) => a.name,
+      (a) => a.published,
+    );
     for (const m of data.modes) {
       this.modeTypes.set(
         m.hull,
@@ -80,8 +76,8 @@ export class JsonCatalog implements Catalog {
     }
   }
 
-  type(folded: string): TypeRecord | undefined {
-    const id = this.typeNames.get(folded);
+  type(foldedName: string): TypeRecord | undefined {
+    const id = this.typeNames.get(foldedName);
     return id === undefined ? undefined : this.types.get(id);
   }
 
@@ -89,8 +85,8 @@ export class JsonCatalog implements Catalog {
     return this.types.get(typeId);
   }
 
-  attribute(folded: string): AttributeRecord | undefined {
-    const id = this.attributeNames.get(folded);
+  attribute(foldedName: string): AttributeRecord | undefined {
+    const id = this.attributeNames.get(foldedName);
     return id === undefined ? undefined : this.attributes.get(id);
   }
 

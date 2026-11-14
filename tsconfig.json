@@ -13,7 +13,8 @@
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "types": ["node"],
+    "paths": { "@eveshipfit/esf-format": ["./src/index.ts"] },
     "noEmit": true
   },
-  "include": ["src", "tests", "*.ts", "*.js"]
+  "include": ["src", "tests", "examples", "*.ts", "*.js"]
 }

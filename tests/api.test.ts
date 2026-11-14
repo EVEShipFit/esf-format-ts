@@ -241,9 +241,9 @@ class MinimalCatalog implements Catalog {
   constructor(inner: JsonCatalog) {
     this.inner = inner;
   }
-  type = (folded: string) => this.inner.type(folded);
+  type = (foldedName: string) => this.inner.type(foldedName);
   typeById = (id: number) => this.inner.typeById(id);
-  attribute = (folded: string) => this.inner.attribute(folded);
+  attribute = (foldedName: string) => this.inner.attribute(foldedName);
   attributeById = (id: number): AttributeRecord | undefined => this.inner.attributeById(id);
 }
 
