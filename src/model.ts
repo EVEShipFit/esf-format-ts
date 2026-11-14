@@ -148,8 +148,10 @@ export interface Entry {
   /**
    * The slot in the `location` rack, counting from 1, like 3 for the third high slot.
    *
-   * Set `location` to the rack too. Left out means the next free slot. `load()` never sets
-   * this: it gives the rack in slot order, with empty slots in between.
+   * Set `location` to the rack too; the item must go in that rack. It cannot be combined
+   * with `count`, and each slot can be pinned only once. Left out means the next free
+   * slot. `load()` never sets this: it gives the rack in slot order, with empty slots in
+   * between.
    */
   slot?: number;
 }

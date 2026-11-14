@@ -147,7 +147,14 @@ test.each<[string, EsfFit[], string]>([
   ["slot zero", [fit({ type: AUTOCANNON, location: "high", slot: 0 })], "at least 1"],
   ["fractional slot", [fit({ type: AUTOCANNON, location: "high", slot: 1.5 })], "a whole number"],
   ["slot too large", [fit({ type: AUTOCANNON, location: "high", slot: 2 ** 32 })], "too large"],
+  ["slot NaN", [fit({ type: AUTOCANNON, location: "high", slot: NaN })], "a whole number"],
+  ["huge slot", [fit({ type: AUTOCANNON, location: "high", slot: 1e21 })], "a whole number"],
   ["slot without a rack", [fit({ type: AUTOCANNON, slot: 1 })], "needs the rack"],
+  [
+    "unknown location with a slot",
+    [fit({ type: AUTOCANNON, location: "nope" as Location, slot: 1 })],
+    "unknown location nope",
+  ],
   [
     "slot with a count",
     [fit({ type: AUTOCANNON, count: 2, location: "high", slot: 1 })],
@@ -380,6 +387,7 @@ test("save pins slots", () => {
     { location: "low" },
     { type: DAMAGE_CONTROL },
   ]);
+  expect(load(saveBinary([pinned], catalog), catalog)).toStrictEqual(load(text, catalog));
 });
 
 test("a catalog with attribute names that fold the same", () => {
