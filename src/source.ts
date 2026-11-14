@@ -40,8 +40,14 @@ function value(n: number): string {
 }
 
 function entryText(e: Entry, catalog: Catalog): string {
-  if (e.type != null && e.location != null && isRack(e.location)) {
-    throw new EsfError("a rack location is only for an empty slot");
+  if (e.slot != null && (!Number.isInteger(e.slot) || e.slot < 1)) {
+    throw new EsfError(`a slot must be a whole number of at least 1, not ${String(e.slot)}`);
+  }
+  if (e.slot != null && (e.location == null || !isRack(e.location))) {
+    throw new EsfError("a slot needs the rack it is in");
+  }
+  if (e.type != null && e.slot == null && e.location != null && isRack(e.location)) {
+    throw new EsfError("an item names a rack only to pin a slot");
   }
   if (e.chargeCount != null && e.charge == null) {
     throw new EsfError("a charge count is set without a charge");
@@ -83,7 +89,7 @@ function entryText(e: Entry, catalog: Catalog): string {
     if (!isRack(e.location) && !isStored(e.location)) {
       throw new EsfError(`unknown location ${String(e.location)}`);
     }
-    parts.push(`@${e.location}`);
+    parts.push(`@${e.location}${e.slot == null ? "" : String(e.slot)}`);
   }
   return parts.join(" ");
 }

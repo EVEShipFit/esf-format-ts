@@ -59,17 +59,18 @@ fit.
 
 Each `Entry` is one line of the fit. An absent field means the default:
 
-| field         | what it is                                                                 | absent means                        |
-| ------------- | -------------------------------------------------------------------------- | ----------------------------------- |
-| `type`        | The type ID.                                                               | An empty slot.                      |
-| `count`       | How many.                                                                  | One; for fighters, a full squadron. |
-| `fitName`     | The name of another fit in the list, which this ship or container carries. | Carries no fit.                     |
-| `charge`      | The charge loaded.                                                         |                                     |
-| `chargeCount` | How many charges.                                                          | A full load.                        |
-| `mutaplasmid` | The mutaplasmid applied.                                                   |                                     |
-| `overrides`   | Attribute values by attribute ID, such as `{ 50: 31.5 }`.                  |                                     |
-| `state`       | `"off"`, `"on"` or `"heat"`.                                               | Active if the type can be, else on. |
-| `location`    | `"cargo"`, `"bay"` or another hold; a rack only for an empty slot.         | Where the type goes by default.     |
+| field         | what it is                                                                                                                             | absent means                        |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `type`        | The type ID.                                                                                                                           | An empty slot.                      |
+| `count`       | How many.                                                                                                                              | One; for fighters, a full squadron. |
+| `fitName`     | The name of another fit in the list, which this ship or container carries.                                                             | Carries no fit.                     |
+| `charge`      | The charge loaded.                                                                                                                     |                                     |
+| `chargeCount` | How many charges.                                                                                                                      | A full load.                        |
+| `mutaplasmid` | The mutaplasmid applied.                                                                                                               |                                     |
+| `overrides`   | Attribute values by attribute ID, such as `{ 50: 31.5 }`.                                                                              |                                     |
+| `state`       | `"off"`, `"on"` or `"heat"`.                                                                                                           | Active if the type can be, else on. |
+| `location`    | `"cargo"`, `"bay"` or another hold; a rack for an empty slot, or with `slot`.                                                          | Where the type goes by default.     |
+| `slot`        | The slot in the `location` rack, counting from 1. `load()` never sets it: it returns the rack in slot order, with empty slots between. | The next free slot.                 |
 
 ## The Catalog
 
