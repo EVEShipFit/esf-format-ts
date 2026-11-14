@@ -13,6 +13,12 @@ export type { AttributeRecord, Catalog, Kind, MutaplasmidRecord, TypeRecord } fr
 export { EsfError, type Where } from "./errors.ts";
 export type { Entry, EsfFit, Hold, Location, Rack, State } from "./model.ts";
 export { fold } from "./names.ts";
+/**
+ * Helpers to build a `Catalog` from the SDE, for the fields that take more than a lookup.
+ *
+ * Each helper takes plain values from the SDE files, so it works however you load them.
+ */
+export * as sde from "./sde.ts";
 
 const BASE64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const BASE64URL_DIGITS = new Int8Array(128).fill(-1);

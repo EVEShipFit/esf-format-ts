@@ -80,9 +80,9 @@ up types and attributes in your copy of the SDE.
 import type { Catalog } from "@eveshipfit/esf-format";
 
 const catalog: Catalog = {
-  type: (folded) => ...,
+  type: (foldedName) => ...,
   typeById: (typeId) => ...,
-  attribute: (folded) => ...,
+  attribute: (foldedName) => ...,
   attributeById: (attributeId) => ...,
 
   // Optional. Without them, no hull has tactical modes and no type has mutaplasmids.
@@ -91,10 +91,34 @@ const catalog: Catalog = {
 };
 ```
 
-Names are looked up folded: index them with `fold(name)`. Where names are
-shared, published wins, then the lowest ID (§4.2).
-[tests/catalog.ts](https://github.com/EVEShipFit/esf-format-ts/blob/main/tests/catalog.ts)
-is a complete example.
+Each method and field says what to return and where in the SDE it comes
+from. `sde` has helpers for the parts that take more than a lookup:
+
+```ts
+import { sde, type TypeRecord } from "@eveshipfit/esf-format";
+
+const typeNames = sde.nameIndex(
+  types,
+  (t) => t._key,
+  (t) => t.name.en,
+  (t) => t.published ?? false,
+);
+
+// effects: effectID -> effectCategoryID; attributes: attributeID -> value
+
+const record: TypeRecord = {
+  id: t._key,
+  name: t.name.en,
+  kind: sde.kind(group.categoryID, t.groupID, effects.keys()),
+  active: sde.active(effects),
+  capacity: t.capacity ?? 0,
+  volume: t.volume ?? 0,
+  squadronSize: sde.squadronSize(attributes),
+};
+```
+
+[examples/sde-jsonl-catalog.ts](https://github.com/EVEShipFit/esf-format-ts/blob/main/examples/sde-jsonl-catalog.ts)
+is a complete example on the official SDE in JSONL: copy it into your project.
 
 ## Tests
 
