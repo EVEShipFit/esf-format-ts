@@ -78,11 +78,11 @@ export interface TypeRecord {
   /** How much room one of it takes, in m³. In the SDE this is `volume`. Use 0 when the type has none. */
   readonly volume: number;
   /**
-   * For a fighter, how many make up a full squadron. Leave it out for anything else.
+   * For a fighter, how many make up a full squadron. Leave it out, or undefined, for anything else.
    *
    * In the SDE this is the attribute `fighterSquadronMaxSize`; `sde.squadronSize` reads it for you.
    */
-  readonly squadronSize?: number;
+  readonly squadronSize?: number | undefined;
 }
 
 /**

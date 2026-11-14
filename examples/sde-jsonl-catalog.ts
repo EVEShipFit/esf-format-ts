@@ -74,6 +74,14 @@ function append<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   }
 }
 
+function need<K, V>(map: ReadonlyMap<K, V>, key: K): V {
+  const value = map.get(key);
+  if (value === undefined) {
+    throw new Error(`missing ${String(key)}`);
+  }
+  return value;
+}
+
 function byName(entries: Named[]): Map<string, number> {
   return sde.nameIndex(
     entries,
@@ -128,7 +136,7 @@ export class SdeJsonlCatalog implements Catalog {
       if (name === undefined) {
         continue;
       }
-      const categoryId = categoryOfGroup.get(t.groupID) as number;
+      const categoryId = need(categoryOfGroup, t.groupID);
       const d = dogma.get(t._key);
       const effects = d?.effects ?? [];
       const record: TypeRecord = {
@@ -138,11 +146,9 @@ export class SdeJsonlCatalog implements Catalog {
         active: sde.active(new Map(effects.map((e) => [e, effectCategory.get(e) ?? 0]))),
         capacity: t.capacity ?? 0,
         volume: t.volume ?? 0,
+        squadronSize: d?.squadronSize,
       };
-      this.types.set(
-        t._key,
-        d?.squadronSize === undefined ? record : { ...record, squadronSize: d.squadronSize },
-      );
+      this.types.set(t._key, record);
       const named = { id: t._key, name, published: t.published ?? false };
       typeRows.push(named);
       if (categoryId === 6) {
@@ -172,7 +178,7 @@ export class SdeJsonlCatalog implements Catalog {
     }
 
     for (const m of mutaplasmidRows.sort((a, b) => a.id - b.id)) {
-      const type = this.types.get(m.id) as TypeRecord;
+      const type = need(this.types, m.id);
       for (const base of m.bases) {
         const values = dogma.get(base)?.rollable;
         const rolls = m.attributes.map(

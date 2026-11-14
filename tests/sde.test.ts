@@ -61,6 +61,7 @@ test("squadronSize", () => {
       ]),
     ),
   ).toBe(6);
+  expect(sde.squadronSize(new Map([[2215, 9.7]]))).toBe(9);
   expect(sde.squadronSize(new Map([[9, 240]]))).toBeUndefined();
 });
 
@@ -70,6 +71,7 @@ test("modeHull matches the longest ship name", () => {
     ["hecate navy", 1],
   ]);
   expect(sde.modeHull("Hecate Sharpshooter Mode", ships)).toBe(35683);
+  expect(sde.modeHull("HECATE Sharpshooter Mode", ships)).toBe(35683);
   expect(sde.modeHull("Hecate Navy Defense Mode", ships)).toBe(1);
   expect(sde.modeHull("Hecate", ships)).toBeUndefined();
   expect(sde.modeHull("Rifter Defense Mode", ships)).toBeUndefined();
