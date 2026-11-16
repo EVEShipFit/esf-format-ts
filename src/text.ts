@@ -33,6 +33,7 @@ export const STORED: readonly Stored[] = ["cargo", "bay", ...HOLDS];
 export const UINT32_MAX = 0xffffffff;
 
 const COUNT = /^[0-9]+x$/;
+const TYPE_ID = /^#[0-9]+$/;
 const HEADER = /^ *%([a-z][a-z0-9-]*)\/([0-9]+) *$/;
 const STATE = /!(off|on|heat)/y;
 const LOCATION = /@([a-z]+)([0-9]*)/y;
@@ -57,10 +58,10 @@ export interface EmptyLine {
 export interface ItemLine {
   kind: "item";
   number: number;
-  name: string;
+  name: string | number;
   count: number | undefined;
   fitName: string | undefined;
-  charge: string | undefined;
+  charge: string | number | undefined;
   chargeCount: number | undefined;
   mutaplasmid: string | undefined;
   overrides: [name: string, value: string][];
@@ -72,7 +73,7 @@ export interface ItemLine {
 export interface FitBlock {
   number: number;
   hullLine: number;
-  hull: string | undefined;
+  hull: string | number | undefined;
   fitName: string | undefined;
   mode: string | undefined;
   lines: (EmptyLine | ItemLine)[];
@@ -80,6 +81,10 @@ export interface FitBlock {
 
 export function isCount(token: string): boolean {
   return COUNT.test(token);
+}
+
+export function isTypeId(name: string): boolean {
+  return TYPE_ID.test(name);
 }
 
 class Cursor {
@@ -214,6 +219,20 @@ class Cursor {
     }
   }
 
+  /** A type name, or a type ID as a number (SPEC §6.13). */
+  typeRef(): string | number {
+    const quoted = this.peek() === '"';
+    const name = this.typeName();
+    if (quoted || !isTypeId(name)) {
+      return name;
+    }
+    const value = Number(name.slice(1));
+    if (value > UINT32_MAX) {
+      this.error("a type ID is too large");
+    }
+    return value;
+  }
+
   match(pattern: RegExp): RegExpExecArray | null {
     pattern.lastIndex = this.i;
     const match = pattern.exec(this.s);
@@ -297,7 +316,7 @@ function hull(header: number, cur: Cursor): FitBlock {
   if (isCount(cur.token())) {
     cur.error("the hull line cannot have a count");
   }
-  block.hull = cur.typeName();
+  block.hull = cur.typeRef();
   let more = cur.nextElement();
   if (more && cur.peek() === '"') {
     block.fitName = cur.quoted();
@@ -337,7 +356,7 @@ function entry(cur: Cursor): EmptyLine | ItemLine {
   const line: ItemLine = {
     kind: "item",
     number: cur.number,
-    name: cur.typeName(),
+    name: cur.typeRef(),
     count,
     fitName: undefined,
     charge: undefined,
@@ -372,7 +391,7 @@ function entry(cur: Cursor): EmptyLine | ItemLine {
     if (c === ":" && stage < 1) {
       cur.i++;
       line.chargeCount = cur.count();
-      line.charge = cur.typeName();
+      line.charge = cur.typeRef();
       stage = 1;
     } else if (c === "+" && stage < 2) {
       cur.i++;

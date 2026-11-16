@@ -215,11 +215,6 @@ test.each<[string, EsfFit[], string]>([
     "unknown location",
   ],
   [
-    "id shadowed",
-    [fit({ type: AVATAR_UNPUBLISHED, location: "cargo" })],
-    "not what its name resolves to",
-  ],
-  [
     "attribute id shadowed",
     [fit({ type: DAMAGE_CONTROL, overrides: { "050": 1 } as Record<number, number> })],
     "resolve to",
@@ -298,6 +293,20 @@ test("published wins a shared name", () => {
   expect(save([fit({ type: AVATAR, location: "cargo" })], catalog)).toMatch(/Avatar\n$/);
 });
 
+test("a shared name is written by type ID", () => {
+  const rifter = fit({ type: AVATAR_UNPUBLISHED });
+  const text = save([rifter], catalog);
+  expect(text).toBe("%esf/1\nRifter\n\n#50097\n");
+  expect(load(text, catalog)).toStrictEqual([rifter]);
+  expect(load(saveBinary([rifter], catalog), catalog)).toStrictEqual([rifter]);
+});
+
+test("load reads a type ID", () => {
+  expect(load("%esf/1\n#587\n#2889 :#21898\n", catalog)).toStrictEqual([
+    fit({ type: AUTOCANNON, charge: EMP }),
+  ]);
+});
+
 test.each<[string, string | Uint8Array, string]>([
   ["empty", "", "the document is empty"],
   ["lone surrogate", "%esf/1\nRifter\ud800\n", "line 2: not valid UTF-8"],
@@ -313,6 +322,9 @@ test.each<[string, string | Uint8Array, string]>([
     "%esf/1\nRifter\n4294967295x Damage Control II\n4294967295x Damage Control II\n",
     "too large",
   ],
+  ["type ID too large", "%esf/1\nRifter\n#4294967296\n", "type ID is too large"],
+  ["unknown type ID", "%esf/1\nRifter\n#999999999\n", "unknown type ID"],
+  ["largest type ID", "%esf/1\nRifter\n#4294967295\n", "unknown type ID"],
 ])("load rejects %s", (_, data, message) => {
   expect(() => load(data, catalog)).toThrow(message);
 });
@@ -354,6 +366,17 @@ test("a catalog that throws", () => {
     };
   }
   expect(() => save([fit()], new Broken(catalog))).toThrow(RangeError);
+});
+
+test("a catalog whose IDs disagree with its names", () => {
+  class Aliased extends MinimalCatalog {
+    override typeById = (id: number) =>
+      this.inner.typeById(id === 1 ? DECAYED_DAMAGE_CONTROL_MUTAPLASMID : id);
+    mutaplasmids = (id: number): MutaplasmidRecord[] => this.inner.mutaplasmids(id);
+  }
+  expect(() => save([fit({ type: DAMAGE_CONTROL, mutaplasmid: 1 })], new Aliased(catalog))).toThrow(
+    "mutaplasmid ID 1 is not what its name resolves to",
+  );
 });
 
 describe("base64url", () => {

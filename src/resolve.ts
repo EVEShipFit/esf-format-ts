@@ -87,7 +87,14 @@ export function modeName(hull: TypeRecord, mode: TypeRecord): string {
   return mode.name.slice(hull.name.length).replace(/^ +/, "");
 }
 
-function lookup(catalog: Catalog, name: string, line: number): TypeRecord {
+function lookup(catalog: Catalog, name: string | number, line: number): TypeRecord {
+  if (typeof name === "number") {
+    const type = catalog.typeById(name);
+    if (type === undefined) {
+      throw new EsfCatalogError(`unknown type ID #${String(name)}`, { line });
+    }
+    return type;
+  }
   const type = catalog.type(fold(name));
   if (type === undefined) {
     throw new EsfCatalogError(`unknown type ${repr(name)}`, { line });
