@@ -124,6 +124,21 @@ const record: TypeRecord = {
 [examples/sde-jsonl-catalog.ts](https://github.com/EVEShipFit/esf-format-ts/blob/main/examples/sde-jsonl-catalog.ts)
 is a complete example on the official SDE in JSONL: copy it into your project.
 
+## ESI
+
+ESI gives each item in a ship a `location_flag`. `esi` turns it into a
+location and a slot:
+
+```ts
+import { esi, type Entry } from "@eveshipfit/esf-format";
+
+const entry: Entry = { type, location: esi.location(flag) ?? "cargo", slot: esi.slot(flag) };
+```
+
+`HiSlot2` gives `"high"` and slot 3, and `ShipHangar` gives `"maintenance"`.
+A flag that is not inside a ship, like `Hangar`, gives `undefined`; the
+example puts those items in the cargo hold.
+
 ## Tests
 
 The test cases live in [esf-format](https://github.com/EVEShipFit/esf-format).
