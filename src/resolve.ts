@@ -23,7 +23,7 @@ import {
 } from "./text.ts";
 
 export type Plugged = "implants" | "boosters";
-export type Place = Rack | Stored | "drones" | "fighters" | Plugged;
+export type Place = Rack | Stored | "drones" | Plugged;
 
 export const PLUGGED: readonly Plugged[] = ["implants", "boosters"];
 
@@ -35,7 +35,7 @@ const DEFAULT_PLACES: Partial<Record<Kind, Place>> = {
   rig: "rig",
   svc: "svc",
   drone: "drones",
-  fighter: "fighters",
+  fighter: "tube",
   implant: "implants",
   booster: "boosters",
 };
@@ -334,7 +334,7 @@ function layout(items: readonly (Item | EmptySlot)[]): Run[] {
     if (item.line.index !== undefined) {
       continue;
     }
-    let remaining = item.line.count ?? 1;
+    let remaining = item.kind === "item" && item.place === "tube" ? 1 : (item.line.count ?? 1);
     while (remaining > 0) {
       while (pinned.has(pos)) {
         pos++;

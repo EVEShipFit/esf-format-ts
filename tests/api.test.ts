@@ -30,6 +30,9 @@ const DECAYED_DAMAGE_CONTROL_MUTAPLASMID = 52224;
 const AVATAR = 11567;
 const AVATAR_UNPUBLISHED = 50097;
 const SMALL_SECURE_CONTAINER = 3467;
+const NYX = 23913;
+const TEMPLAR = 40556;
+const FIRBOLG = 40558;
 
 function fit(...entries: Entry[]): EsfFit {
   return { hull: RIFTER, entries };
@@ -388,6 +391,29 @@ test("save pins slots", () => {
     { type: DAMAGE_CONTROL },
   ]);
   expect(load(saveBinary([pinned], catalog), catalog)).toStrictEqual(load(text, catalog));
+});
+
+test("save pins fighter tubes", () => {
+  const nyx: EsfFit = {
+    hull: NYX,
+    entries: [
+      { type: TEMPLAR },
+      { type: FIRBOLG, count: 3, location: "tube", slot: 4 },
+      { location: "tube", slot: 2 },
+      { type: TEMPLAR, location: "bay" },
+    ],
+  };
+  const text = save([nyx], catalog);
+  expect(text).toBe(
+    "%esf/1\nNyx\n\n" + "Templar II\n" + "2x - @tube\n" + "3x Firbolg II\n" + "Templar II @bay\n",
+  );
+  expect(load(text, catalog)[0]?.entries).toStrictEqual([
+    { type: TEMPLAR },
+    { count: 2, location: "tube" },
+    { type: FIRBOLG, count: 3 },
+    { type: TEMPLAR, location: "bay" },
+  ]);
+  expect(load(saveBinary([nyx], catalog), catalog)).toStrictEqual(load(text, catalog));
 });
 
 test("a catalog with attribute names that fold the same", () => {

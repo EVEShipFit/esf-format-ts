@@ -11,7 +11,7 @@ import {
   type TypeRecord,
 } from "./catalog.ts";
 import { EsfError } from "./errors.ts";
-import { compact, type Entry, type EsfFit, type Location, type State } from "./model.ts";
+import { compact, type Entry, type EsfFit, type Location, type Rack, type State } from "./model.ts";
 import { compareCodePoints, fold, shortestUnique } from "./names.ts";
 import { formatNumber } from "./number.ts";
 import {
@@ -22,10 +22,18 @@ import {
   type Fit,
   type Item,
   type Place,
+  type Run,
 } from "./resolve.ts";
 import { HOLDS, RACKS, SIGILS, UINT32_MAX, isCount, isRack, isStored } from "./text.ts";
 
-const GROUPS: readonly Place[] = [...RACKS, "drones", "fighters", "cargo", ...HOLDS, ...PLUGGED];
+const GROUPS: readonly Place[] = [
+  ...RACKS.filter((rack) => rack !== "tube"),
+  "drones",
+  "tube",
+  "cargo",
+  ...HOLDS,
+  ...PLUGGED,
+];
 
 export interface CanonLine {
   type: TypeRecord | undefined;
@@ -206,22 +214,26 @@ function collapse(lines: readonly Collapsible[]): CanonLine[] {
     out.push(entry);
     previousBody = text;
   }
-  return out.map(({ line }) => {
-    if (line.count === 1) {
+  return out.map(({ repeatable, line }) => {
+    if (repeatable && line.count === 1) {
       line.count = undefined;
     }
     return line;
   });
 }
 
-function rack(fit: Fit, rack: (typeof RACKS)[number], catalog: Catalog): CanonLine[] {
+function occupied(fit: Fit, rack: Rack): Run[] {
   const runs = fit.racks.get(rack) ?? [];
   let end = runs.length;
   while (end > 0 && runs[end - 1]?.item === undefined) {
     end--;
   }
+  return runs.slice(0, end);
+}
+
+function rack(fit: Fit, rack: Rack, catalog: Catalog): CanonLine[] {
   return collapse(
-    runs.slice(0, end).map((run) => {
+    occupied(fit, rack).map((run) => {
       const out = run.item === undefined ? canonLine(undefined) : line(run.item, fit, catalog);
       if (run.item === undefined) {
         out.location = rack;
@@ -254,16 +266,22 @@ function sorted(items: readonly Item[], fit: Fit, catalog: Catalog): CanonLine[]
 }
 
 function fighters(items: readonly Item[], fit: Fit, catalog: Catalog): CanonLine[] {
-  const tubes = items
-    .filter((item) => item.place === "fighters")
-    .map((item) => {
-      const out = line(item, fit, catalog);
-      const count = item.line.count;
-      if (count !== undefined && count !== item.type.squadronSize) {
+  const tubes = collapse(
+    occupied(fit, "tube").map((run) => {
+      if (run.item === undefined) {
+        const out = canonLine(undefined);
+        out.location = "tube";
+        out.count = run.length;
+        return { repeatable: true, line: out };
+      }
+      const out = line(run.item, fit, catalog);
+      const count = run.item.line.count;
+      if (count !== undefined && count !== run.item.type.squadronSize) {
         out.count = count;
       }
-      return out;
-    });
+      return { repeatable: false, line: out };
+    }),
+  );
   return [
     ...tubes,
     ...sorted(
@@ -308,12 +326,12 @@ export function canonicalFit(fit: Fit, catalog: Catalog): CanonFit {
   for (const group of GROUPS) {
     const items = groups.get(group) ?? [];
     let chunk: CanonLine[];
-    if (isRack(group)) {
+    if (group === "tube") {
+      chunk = fighters(items, fit, catalog);
+    } else if (isRack(group)) {
       chunk = rack(fit, group, catalog);
     } else if (group === "drones") {
       chunk = drones(items, fit, catalog);
-    } else if (group === "fighters") {
-      chunk = fighters(items, fit, catalog);
     } else {
       chunk = sorted(items, fit, catalog);
     }

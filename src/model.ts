@@ -22,8 +22,9 @@ export type State = "off" | "on" | "heat";
  * - `"rig"`: the rig rack.
  * - `"sub"`: the subsystem rack. Not the same as the hold `"subsystem"`.
  * - `"svc"`: the structure service rack.
+ * - `"tube"`: the fighter launch tubes, for fighters only.
  */
-export type Rack = "high" | "mid" | "low" | "rig" | "sub" | "svc";
+export type Rack = "high" | "mid" | "low" | "rig" | "sub" | "svc" | "tube";
 
 /**
  * A special hold (esf/1 spec §5.1).
@@ -151,9 +152,9 @@ export interface Entry {
    * The slot in the `location` rack, counting from 1, like 3 for the third high slot.
    *
    * Set `location` to the rack too; the item must go in that rack. It cannot be combined
-   * with `count`, and each slot can be pinned only once. Left out means the next free
-   * slot. `load()` never sets this: it gives the rack in slot order, with empty slots in
-   * between.
+   * with `count`, except for a fighter in `"tube"`, where `count` is still the size of
+   * the squadron. Each slot can be pinned only once. Left out means the next free slot.
+   * `load()` never sets this: it gives the rack in slot order, with empty slots in between.
    */
   slot?: number;
 }
