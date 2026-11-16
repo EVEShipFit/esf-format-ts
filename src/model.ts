@@ -74,6 +74,8 @@ export type Hold =
  *
  * An item goes where its `Kind` says, so most entries leave this out. Set it to store an
  * item somewhere else, like a spare Damage Control II in `"cargo"`.
+ * So a drone with no location is out in space, and a fighter is in a launch tube. Set
+ * `"bay"` to keep either one in its bay.
  *
  * - A {@link Rack}, like `"high"`, is for empty slots, and for an item put in a given
  *   `slot`. Otherwise, an item never names its rack.
