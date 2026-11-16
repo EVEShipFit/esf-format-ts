@@ -13,6 +13,7 @@ export type { AttributeRecord, Catalog, Kind, MutaplasmidRecord, TypeRecord } fr
 export { EsfError, type Where } from "./errors.ts";
 export type { Entry, EsfFit, Hold, Location, Rack, State } from "./model.ts";
 export { fold } from "./names.ts";
+export * as esi from "./esi.ts";
 /**
  * Helpers to build a `Catalog` from the SDE, for the fields that take more than a lookup.
  *

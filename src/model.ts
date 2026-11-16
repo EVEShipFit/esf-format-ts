@@ -156,7 +156,7 @@ export interface Entry {
    * the squadron. Each slot can be pinned only once. Left out means the next free slot.
    * `load()` never sets this: it gives the rack in slot order, with empty slots in between.
    */
-  slot?: number;
+  slot?: number | undefined;
 }
 
 /** `T` with every optional field also allowed to be undefined. */
