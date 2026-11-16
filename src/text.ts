@@ -6,7 +6,7 @@ import type { Hold, Rack, State } from "./model.ts";
 export type Stored = "cargo" | "bay" | Hold;
 
 export const SIGILS = ':+{!@/"';
-export const RACKS: readonly Rack[] = ["sub", "high", "mid", "low", "rig", "svc"];
+export const RACKS: readonly Rack[] = ["sub", "high", "mid", "low", "rig", "svc", "tube"];
 export const HOLDS: readonly Hold[] = [
   "ammo",
   "booster",
@@ -393,7 +393,7 @@ function entry(cur: Cursor): EmptyLine | ItemLine {
       if (line.index === undefined && !isStored(line.location)) {
         cur.error("an item names a rack only to pin a slot, which needs an index");
       }
-      if (line.index !== undefined && count !== undefined) {
+      if (line.index !== undefined && count !== undefined && line.location !== "tube") {
         cur.error("a count and a pinned slot are mutually exclusive");
       }
       stage = 5;

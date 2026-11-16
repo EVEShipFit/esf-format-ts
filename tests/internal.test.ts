@@ -139,7 +139,7 @@ test.each<[string, Uint8Array, string]>([
   ["name cut short", fitOf(0x1a, 0x05), "cut short"],
   ["unknown Entry field", entryOf(uint(11, 1)), "Entry has a field that is not in the schema"],
   ["unknown State", entryOf(uint(9, 4)), "unknown State value 4"],
-  ["unknown Location", entryOf(uint(10, 28)), "unknown Location value 28"],
+  ["unknown Location", entryOf(uint(10, 29)), "unknown Location value 29"],
   ["packed doubles cut short", entryOf(0x42, 0x08, 0x00), "cut short"],
   ["packed doubles of 7 bytes", entryOf(record(8, zeros(7))), "packed doubles cut short"],
   ["overrides of different lengths", entryOf(uint(7, 50)), "different lengths"],

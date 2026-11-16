@@ -73,6 +73,7 @@ Each `Entry` is one line of the fit. An absent field means the default:
 | `slot`        | The slot in the `location` rack, counting from 1.                             | The next free slot.                 |
 
 `load()` never sets `slot`: it returns each rack in slot order, with empty slots between.
+The launch tubes are the rack `"tube"`, one fighter squadron per tube.
 
 ## The Catalog
 

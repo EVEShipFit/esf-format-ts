@@ -42,6 +42,7 @@ const LOCATIONS: readonly Location[] = [
   "planetary",
   "quafe",
   "subsystem",
+  "tube",
 ];
 
 function encodeLine(out: Writer, line: CanonLine): void {
