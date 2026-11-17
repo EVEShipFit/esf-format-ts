@@ -1,6 +1,6 @@
 // The Protocol Buffers wire format.
 
-import { EsfError } from "./errors.ts";
+import { EsfFormatError } from "./errors.ts";
 
 export const VARINT = 0;
 export const I64 = 1;
@@ -13,8 +13,8 @@ export function tag(field: number, wire: number): number {
   return (field << 3) | wire;
 }
 
-function invalid(why: string): EsfError {
-  return new EsfError(`binary: not valid Protocol Buffers (${why})`);
+function invalid(why: string): EsfFormatError {
+  return new EsfFormatError(`binary: not valid Protocol Buffers (${why})`);
 }
 
 const ENCODER = new TextEncoder();

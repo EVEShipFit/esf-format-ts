@@ -3,7 +3,7 @@
 import * as binary from "./binary.ts";
 import { canonicalFit, render, toModel, type CanonFit } from "./canonical.ts";
 import type { Catalog } from "./catalog.ts";
-import { EsfError } from "./errors.ts";
+import { at, EsfError, EsfFormatError } from "./errors.ts";
 import type { EsfFit } from "./model.ts";
 import { resolve } from "./resolve.ts";
 import { source, verify } from "./source.ts";
@@ -17,7 +17,7 @@ export {
   type MutaplasmidRecord,
   type TypeRecord,
 } from "./catalog.ts";
-export { EsfError, type Where } from "./errors.ts";
+export { EsfCatalogError, EsfError, EsfFormatError, EsfRuleError, type Where } from "./errors.ts";
 export type { Entry, EsfFit, Hold, Location, Rack, State } from "./model.ts";
 export { fold } from "./names.ts";
 export * as esi from "./esi.ts";
@@ -55,7 +55,7 @@ function checked(fits: readonly EsfFit[], catalog: Catalog): CanonFit[] {
     return canonical(parse(text), catalog, fits);
   } catch (e) {
     if (e instanceof EsfError && e.line !== undefined) {
-      throw new EsfError(e.reason, where[e.line - 1]);
+      throw at(e, where[e.line - 1]);
     }
     throw e;
   }
@@ -64,7 +64,7 @@ function checked(fits: readonly EsfFit[], catalog: Catalog): CanonFit[] {
 /** Read a text or binary document, in canonical form. */
 export function load(data: Uint8Array | string, catalog: Catalog): EsfFit[] {
   if (data.length === 0) {
-    throw new EsfError("the document is empty");
+    throw new EsfFormatError("the document is empty");
   }
   if (isText(data)) {
     const text = typeof data === "string" ? data : decode(data);
@@ -101,7 +101,7 @@ export function toBase64url(data: Uint8Array): string {
 export function fromBase64url(encoded: string): Uint8Array {
   const text = encoded.trim();
   if (text.length % 4 === 1) {
-    throw new EsfError("not valid base64url");
+    throw new EsfFormatError("not valid base64url");
   }
   const out = new Uint8Array(Math.floor((text.length * 3) / 4));
   let bits = 0;
@@ -110,7 +110,7 @@ export function fromBase64url(encoded: string): Uint8Array {
   for (let i = 0; i < text.length; i++) {
     const digit = BASE64URL_DIGITS[text.charCodeAt(i)] ?? -1;
     if (digit < 0) {
-      throw new EsfError("not valid base64url");
+      throw new EsfFormatError("not valid base64url");
     }
     value = ((value << 6) | digit) & 0xffffff;
     bits += 6;

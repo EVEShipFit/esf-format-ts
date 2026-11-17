@@ -10,7 +10,7 @@ import {
   type MutaplasmidRecord,
   type TypeRecord,
 } from "./catalog.ts";
-import { EsfError } from "./errors.ts";
+import { EsfRuleError } from "./errors.ts";
 import { compact, type Entry, type EsfFit, type Location, type Rack, type State } from "./model.ts";
 import { compareCodePoints, fold, shortestUnique } from "./names.ts";
 import { formatNumber } from "./number.ts";
@@ -206,7 +206,9 @@ function collapse(lines: readonly Collapsible[]): CanonLine[] {
     if (prev?.repeatable === true && entry.repeatable && previousBody === text) {
       const count = (prev.line.count as number) + (entry.line.count as number);
       if (count > UINT32_MAX) {
-        throw new EsfError(`lines collapse into a count of ${String(count)}, which is too large`);
+        throw new EsfRuleError(
+          `lines collapse into a count of ${String(count)}, which is too large`,
+        );
       }
       prev.line.count = count;
       continue;
