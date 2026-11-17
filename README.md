@@ -75,7 +75,7 @@ Each `Entry` is one line of the fit. An absent field means the default:
 | `charge`      | The charge loaded.                                                            |                                     |
 | `chargeCount` | How many charges.                                                             | A full load.                        |
 | `mutaplasmid` | The mutaplasmid applied.                                                      |                                     |
-| `overrides`   | Attribute values by attribute ID, such as `{ 50: 31.5 }`.                     |                                     |
+| `overrides`   | Dogma attribute values by attribute ID, such as `{ 50: 31.5 }`.               |                                     |
 | `state`       | `"off"`, `"on"` or `"heat"`.                                                  | Active if the type can be, else on. |
 | `location`    | `"cargo"`, `"bay"` or another hold; a rack for an empty slot, or with `slot`. | Where the type goes by default.     |
 | `slot`        | The slot in the `location` rack, counting from 1.                             | The next free slot.                 |
@@ -86,7 +86,7 @@ The launch tubes are the rack `"tube"`, one fighter squadron per tube.
 ## The Catalog
 
 The library holds no game data. You give it a `Catalog`: an object that looks
-up types and attributes in your copy of the SDE.
+up types and dogma attributes in your copy of the SDE.
 
 ```ts
 import type { Catalog } from "@eveshipfit/esf-format";
@@ -116,7 +116,7 @@ const typeNames = sde.nameIndex(
   (t) => t.published ?? false,
 );
 
-// effects: effectID -> effectCategoryID; attributes: attributeID -> value
+// effects: effectID -> effectCategoryID; attributes: dogma attributeID -> value
 
 const record: TypeRecord = {
   id: t._key,
