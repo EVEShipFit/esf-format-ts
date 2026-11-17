@@ -124,7 +124,7 @@ export function modeHull(
 /**
  * Builds the name store that `Catalog.type` and `Catalog.attribute` look names up in.
  *
- * Give it every type, or every attribute, including unpublished ones. Each name is
+ * Give it every type, or every dogma attribute, including unpublished ones. Each name is
  * case-folded with {@link fold}, the same way the library does with the names in a fit.
  * Where names are shared, the published one wins, then the lowest ID (§4.2).
  * In the SDE, a type or attribute without `published` counts as not published.

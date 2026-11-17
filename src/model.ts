@@ -138,7 +138,7 @@ export interface Entry {
    */
   mutaplasmid?: number;
   /**
-   * Attribute values that replace the type's own, by attribute ID, like `{ 20: 524 }` for speedFactor.
+   * Dogma attribute values that replace the type's own, by attribute ID, like `{ 20: 524 }` for speedFactor.
    *
    * Each value is the new base value, not a change on top of it. Attributes not listed
    * keep the type's value. Left out or empty for none.

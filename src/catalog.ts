@@ -58,7 +58,7 @@ export function canBeHull(kind: Kind): boolean {
  * With the SDE, most fields come from `types.jsonl`. `kind`, `active` and `squadronSize`
  * also need `groups.jsonl`, `typeDogma.jsonl` and `dogmaEffects.jsonl`, through the helpers in `sde`.
  * Include every type in `types.jsonl`. A type with no row in `typeDogma.jsonl` has no effects
- * and no attributes: give the helpers an empty list or map.
+ * and no dogma attributes: give the helpers an empty list or map.
  */
 export interface TypeRecord {
   /** The type ID, like 587 for the Rifter. In the SDE this is `_key`. */
@@ -85,7 +85,7 @@ export interface TypeRecord {
   /**
    * For a fighter, how many make up a full squadron. Leave it out, or undefined, for anything else.
    *
-   * In the SDE this is the attribute `fighterSquadronMaxSize`; `sde.squadronSize` reads it for you.
+   * In the SDE this is the dogma attribute `fighterSquadronMaxSize`; `sde.squadronSize` reads it for you.
    */
   readonly squadronSize?: number | undefined;
 }
@@ -113,7 +113,7 @@ export interface MutaplasmidRecord {
   /** The mutaplasmid's own type: the type whose ID is the entry's `_key`. */
   readonly type: TypeRecord;
   /**
-   * The attributes the mutaplasmid changes, each as an attribute ID with the base type's
+   * The dogma attributes the mutaplasmid changes, each as an attribute ID with the base type's
    * value before the change, in any order.
    *
    * The attribute IDs are the `_key` of each item in the entry's `attributeIDs`; its `min` and
@@ -157,7 +157,7 @@ export interface Catalog {
   typeById(typeId: number): TypeRecord | undefined;
 
   /**
-   * Finds an attribute by its name, like "speedfactor".
+   * Finds a dogma attribute by its name, like "speedfactor".
    *
    * Used to read attribute overrides, like the rolls on an abyssal module.
    *
@@ -170,7 +170,7 @@ export interface Catalog {
   attribute(foldedName: string): AttributeRecord | undefined;
 
   /**
-   * Finds an attribute by its ID.
+   * Finds a dogma attribute by its ID.
    *
    * Used to write attribute overrides, like the rolls on an abyssal module.
    *
