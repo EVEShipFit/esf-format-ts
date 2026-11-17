@@ -47,6 +47,11 @@ export type Kind =
   | "booster"
   | "other";
 
+/** Whether a type of the given kind can be the `hull` of a fit: true for `"hull"` and `"container"` only. */
+export function canBeHull(kind: Kind): boolean {
+  return kind === "hull" || kind === "container";
+}
+
 /**
  * One type, like "Rifter" or "200mm AutoCannon II", as the library needs it.
  *

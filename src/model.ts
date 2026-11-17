@@ -115,8 +115,8 @@ export interface Entry {
   /**
    * The name of another fit in the same list, which this entry carries.
    *
-   * Only for a ship, structure or container. The other fit must have this entry's
-   * `type` as its `hull` and this as its `name`, ignoring case. For example,
+   * Only for a type for which `canBeHull(kind)` is true. The other fit must have this
+   * entry's `type` as its `hull` and this as its `name`, ignoring case. For example,
    * a Heron with fit name "Scout" and location `"frigate"` carries that fit in the
    * Frigate Escape Bay. Left out means an unfitted ship or an empty container.
    */
@@ -176,6 +176,7 @@ export function compact<T extends object>(value: Loose<T>): T {
 export interface EsfFit {
   /**
    * The type ID of the ship, structure or container, like 587 for the Rifter.
+   * Only a type for which `canBeHull(kind)` is true can be a hull.
    *
    * Leave it out for a fit without a ship, like the items in a contract: then every entry is
    * stored in cargo, and the fit has no slots and no `mode`.

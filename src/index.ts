@@ -9,7 +9,14 @@ import { resolve } from "./resolve.ts";
 import { source, verify } from "./source.ts";
 import { decode, parse, type FitBlock } from "./text.ts";
 
-export type { AttributeRecord, Catalog, Kind, MutaplasmidRecord, TypeRecord } from "./catalog.ts";
+export {
+  canBeHull,
+  type AttributeRecord,
+  type Catalog,
+  type Kind,
+  type MutaplasmidRecord,
+  type TypeRecord,
+} from "./catalog.ts";
 export { EsfError, type Where } from "./errors.ts";
 export type { Entry, EsfFit, Hold, Location, Rack, State } from "./model.ts";
 export { fold } from "./names.ts";

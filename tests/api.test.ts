@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  canBeHull,
   EsfError,
   fold,
   fromBase64url,
@@ -12,6 +13,7 @@ import {
   type Catalog,
   type Entry,
   type EsfFit,
+  type Kind,
   type Location,
   type MutaplasmidRecord,
   type State,
@@ -81,6 +83,27 @@ test("save writes canonical text", () => {
       "\n" +
       "100x Republic Fleet EMP S\n",
   );
+});
+
+test("only hulls and containers can be hulls", () => {
+  const kinds: Kind[] = [
+    "hull",
+    "container",
+    "mode",
+    "sub",
+    "high",
+    "mid",
+    "low",
+    "rig",
+    "svc",
+    "drone",
+    "fighter",
+    "charge",
+    "implant",
+    "booster",
+    "other",
+  ];
+  expect(kinds.filter(canBeHull)).toEqual(["hull", "container"]);
 });
 
 test("load returns canonical fits", () => {
