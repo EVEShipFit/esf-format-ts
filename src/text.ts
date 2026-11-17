@@ -33,6 +33,8 @@ export const STORED: readonly Stored[] = ["cargo", "bay", ...HOLDS];
 export const UINT32_MAX = 0xffffffff;
 
 const COUNT = /^[0-9]+x$/;
+const TYPE_ID = /#([0-9]+)/y;
+const NAME_WITH_ID = /^(.*[^ ])#([0-9]+)$/s;
 const HEADER = /^ *%([a-z][a-z0-9-]*)\/([0-9]+) *$/;
 const STATE = /!(off|on|heat)/y;
 const LOCATION = /@([a-z]+)([0-9]*)/y;
@@ -54,13 +56,18 @@ export interface EmptyLine {
   index: number | undefined;
 }
 
+export interface TypeRef {
+  name: string;
+  id: number | undefined;
+}
+
 export interface ItemLine {
   kind: "item";
   number: number;
-  name: string;
+  type: TypeRef;
   count: number | undefined;
   fitName: string | undefined;
-  charge: string | undefined;
+  charge: TypeRef | undefined;
   chargeCount: number | undefined;
   mutaplasmid: string | undefined;
   overrides: [name: string, value: string][];
@@ -72,7 +79,7 @@ export interface ItemLine {
 export interface FitBlock {
   number: number;
   hullLine: number;
-  hull: string | undefined;
+  hull: TypeRef | undefined;
   fitName: string | undefined;
   mode: string | undefined;
   lines: (EmptyLine | ItemLine)[];
@@ -80,6 +87,10 @@ export interface FitBlock {
 
 export function isCount(token: string): boolean {
   return COUNT.test(token);
+}
+
+export function endsInTypeId(name: string): boolean {
+  return NAME_WITH_ID.test(name);
 }
 
 class Cursor {
@@ -214,6 +225,29 @@ class Cursor {
     }
   }
 
+  /** A type name, and the type ID after it if there is one (SPEC §6.13). */
+  typeRef(): TypeRef {
+    if (this.peek() === '"') {
+      const name = this.quoted();
+      const match = this.match(TYPE_ID);
+      return { name, id: match === null ? undefined : this.typeId(match[1] as string) };
+    }
+    const name = this.typeName();
+    const match = NAME_WITH_ID.exec(name);
+    if (match === null) {
+      return { name, id: undefined };
+    }
+    return { name: match[1] as string, id: this.typeId(match[2] as string) };
+  }
+
+  typeId(digits: string): number {
+    const value = Number(digits);
+    if (value > UINT32_MAX) {
+      this.error("a type ID is too large");
+    }
+    return value;
+  }
+
   match(pattern: RegExp): RegExpExecArray | null {
     pattern.lastIndex = this.i;
     const match = pattern.exec(this.s);
@@ -297,7 +331,7 @@ function hull(header: number, cur: Cursor): FitBlock {
   if (isCount(cur.token())) {
     cur.error("the hull line cannot have a count");
   }
-  block.hull = cur.typeName();
+  block.hull = cur.typeRef();
   let more = cur.nextElement();
   if (more && cur.peek() === '"') {
     block.fitName = cur.quoted();
@@ -337,7 +371,7 @@ function entry(cur: Cursor): EmptyLine | ItemLine {
   const line: ItemLine = {
     kind: "item",
     number: cur.number,
-    name: cur.typeName(),
+    type: cur.typeRef(),
     count,
     fitName: undefined,
     charge: undefined,
@@ -372,7 +406,7 @@ function entry(cur: Cursor): EmptyLine | ItemLine {
     if (c === ":" && stage < 1) {
       cur.i++;
       line.chargeCount = cur.count();
-      line.charge = cur.typeName();
+      line.charge = cur.typeRef();
       stage = 1;
     } else if (c === "+" && stage < 2) {
       cur.i++;

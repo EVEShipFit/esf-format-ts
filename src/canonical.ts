@@ -24,7 +24,16 @@ import {
   type Place,
   type Run,
 } from "./resolve.ts";
-import { HOLDS, RACKS, SIGILS, UINT32_MAX, isCount, isRack, isStored } from "./text.ts";
+import {
+  HOLDS,
+  RACKS,
+  SIGILS,
+  UINT32_MAX,
+  isCount,
+  isRack,
+  isStored,
+  endsInTypeId,
+} from "./text.ts";
 
 const GROUPS: readonly Place[] = [
   ...RACKS.filter((rack) => rack !== "tube"),
@@ -37,10 +46,12 @@ const GROUPS: readonly Place[] = [
 
 export interface CanonLine {
   type: TypeRecord | undefined;
+  typeText: string;
   count: number | undefined;
   fitName: string | undefined;
   charge: TypeRecord | undefined;
   chargeCount: number | undefined;
+  chargeText: string | undefined;
   mutaplasmid: MutaplasmidRecord | undefined;
   mutaplasmidName: string | undefined;
   overrides: [AttributeRecord, number][];
@@ -50,6 +61,7 @@ export interface CanonLine {
 
 export interface CanonFit {
   hull: TypeRecord | undefined;
+  hullText: string;
   name: string | undefined;
   mode: TypeRecord | undefined;
   modeText: string | undefined;
@@ -66,6 +78,7 @@ export function needsQuotes(name: string): boolean {
     name.startsWith("-") ||
     name.startsWith("%") ||
     isCount(words[0] as string) ||
+    endsInTypeId(name) ||
     words.some((word) => word === "" || SIGILS.includes(word.charAt(0)))
   );
 }
@@ -74,13 +87,21 @@ export function quoteType(name: string): string {
   return needsQuotes(name) ? quote(name) : name;
 }
 
-function canonLine(type: TypeRecord | undefined): CanonLine {
+/** A type as text: its name, and its ID where the name resolves to another type (SPEC §6.13). */
+export function typeRef(catalog: Catalog, type: TypeRecord): string {
+  const name = quoteType(type.name);
+  return catalog.type(fold(type.name))?.id === type.id ? name : `${name}#${String(type.id)}`;
+}
+
+function canonLine(type: TypeRecord | undefined, typeText = "-"): CanonLine {
   return {
     type,
+    typeText,
     count: undefined,
     fitName: undefined,
     charge: undefined,
     chargeCount: undefined,
+    chargeText: undefined,
     mutaplasmid: undefined,
     mutaplasmidName: undefined,
     overrides: [],
@@ -90,13 +111,13 @@ function canonLine(type: TypeRecord | undefined): CanonLine {
 }
 
 function body(line: CanonLine): string {
-  const parts = [line.type === undefined ? "-" : quoteType(line.type.name)];
+  const parts = [line.typeText];
   if (line.fitName !== undefined) {
     parts.push(quote(line.fitName));
   }
-  if (line.charge !== undefined) {
+  if (line.chargeText !== undefined) {
     const count = line.chargeCount === undefined ? "" : `${String(line.chargeCount)}x `;
-    parts.push(`:${count}${quoteType(line.charge.name)}`);
+    parts.push(`:${count}${line.chargeText}`);
   }
   if (line.mutaplasmidName !== undefined) {
     parts.push(`+${quoteType(line.mutaplasmidName)}`);
@@ -119,7 +140,7 @@ function lineText(line: CanonLine): string {
 }
 
 function fitText(fit: CanonFit): string {
-  const hull = [fit.hull === undefined ? "-" : quoteType(fit.hull.name)];
+  const hull = [fit.hullText];
   if (fit.name !== undefined) {
     hull.push(quote(fit.name));
   }
@@ -152,12 +173,13 @@ function compareOverrides([a]: [AttributeRecord, number], [b]: [AttributeRecord,
 
 function line(item: Item, fit: Fit, catalog: Catalog): CanonLine {
   const source = item.line;
-  const out = canonLine(item.type);
+  const out = canonLine(item.type, typeRef(catalog, item.type));
 
   out.fitName = item.reference?.block.fitName;
 
   if (item.charge !== undefined) {
     out.charge = item.charge;
+    out.chargeText = typeRef(catalog, item.charge);
     const count = source.chargeCount;
     if (count !== undefined && BigInt(count) !== fullLoad(item.type, item.charge)) {
       out.chargeCount = count;
@@ -350,7 +372,8 @@ export function canonicalFit(fit: Fit, catalog: Catalog): CanonFit {
     modeText = shortestUnique(own, without(others, own));
   }
 
-  return { hull, name: fit.block.fitName, mode, modeText, groups: chunks };
+  const hullText = hull === undefined ? "-" : typeRef(catalog, hull);
+  return { hull, hullText, name: fit.block.fitName, mode, modeText, groups: chunks };
 }
 
 export function render(fits: readonly CanonFit[]): string {

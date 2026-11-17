@@ -1,8 +1,8 @@
 // Fits as the text they stand for, and the check that their IDs match it (SPEC §10.2).
 
-import type { Catalog } from "./catalog.ts";
+import type { Catalog, TypeRecord } from "./catalog.ts";
 import { formatNumber } from "./number.ts";
-import { quote, quoteType } from "./canonical.ts";
+import { quote, quoteType, typeRef } from "./canonical.ts";
 import {
   at,
   EsfCatalogError,
@@ -24,12 +24,20 @@ function name(text: string): string {
   return quote(text);
 }
 
-function typeName(catalog: Catalog, typeId: number, what: string): string {
+function typeOf(catalog: Catalog, typeId: number, what: string): TypeRecord {
   const type = catalog.typeById(typeId);
   if (type === undefined) {
     throw new EsfCatalogError(`unknown ${what} type ID ${String(typeId)}`);
   }
-  return quoteType(type.name);
+  return type;
+}
+
+function typeName(catalog: Catalog, typeId: number, what: string): string {
+  return quoteType(typeOf(catalog, typeId, what).name);
+}
+
+function typeText(catalog: Catalog, typeId: number, what: string): string {
+  return typeRef(catalog, typeOf(catalog, typeId, what));
 }
 
 function count(n: number): string {
@@ -67,13 +75,13 @@ function entryText(e: Entry, catalog: Catalog): string {
   if (e.count != null) {
     parts.push(count(e.count));
   }
-  parts.push(e.type == null ? "-" : typeName(catalog, e.type, "item"));
+  parts.push(e.type == null ? "-" : typeText(catalog, e.type, "item"));
   if (e.fitName) {
     parts.push(name(e.fitName));
   }
   if (e.charge != null) {
     const n = e.chargeCount == null ? "" : `${count(e.chargeCount)} `;
-    parts.push(`:${n}${typeName(catalog, e.charge, "charge")}`);
+    parts.push(`:${n}${typeText(catalog, e.charge, "charge")}`);
   }
   if (e.mutaplasmid != null) {
     parts.push(`+${typeName(catalog, e.mutaplasmid, "mutaplasmid")}`);
@@ -102,7 +110,7 @@ function entryText(e: Entry, catalog: Catalog): string {
 }
 
 function hullText(fit: EsfFit, catalog: Catalog): string {
-  const hull = [fit.hull == null ? "-" : typeName(catalog, fit.hull, "hull")];
+  const hull = [fit.hull == null ? "-" : typeText(catalog, fit.hull, "hull")];
   if (fit.name) {
     hull.push(name(fit.name));
   }

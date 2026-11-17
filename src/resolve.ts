@@ -21,6 +21,7 @@ import {
   type FitBlock,
   type ItemLine,
   type Stored,
+  type TypeRef,
 } from "./text.ts";
 
 export type Plugged = "implants" | "boosters";
@@ -87,7 +88,20 @@ export function modeName(hull: TypeRecord, mode: TypeRecord): string {
   return mode.name.slice(hull.name.length).replace(/^ +/, "");
 }
 
-function lookup(catalog: Catalog, name: string, line: number): TypeRecord {
+function lookup(catalog: Catalog, ref: TypeRef, line: number): TypeRecord {
+  const { name, id } = ref;
+  if (id !== undefined) {
+    const type = catalog.typeById(id);
+    if (type === undefined) {
+      throw new EsfCatalogError(`unknown type ID #${String(id)}`, { line });
+    }
+    if (fold(type.name) !== fold(name)) {
+      throw new EsfRuleError(`type ID #${String(id)} is ${repr(type.name)}, not ${repr(name)}`, {
+        line,
+      });
+    }
+    return type;
+  }
   const type = catalog.type(fold(name));
   if (type === undefined) {
     throw new EsfCatalogError(`unknown type ${repr(name)}`, { line });
@@ -163,7 +177,7 @@ function resolveLine(
     return { kind: "empty", line, place: line.rack };
   }
 
-  const type = lookup(catalog, line.name, line.number);
+  const type = lookup(catalog, line.type, line.number);
   const kind = type.kind;
   if (kind === "mode") {
     throw new EsfRuleError("a tactical mode is only written on the hull line", where);
