@@ -139,6 +139,10 @@ const entry: Entry = { type, location: esi.location(flag) ?? "cargo", slot: esi.
 A flag that is not inside a ship, like `Hangar`, gives `undefined`; the
 example puts those items in the cargo hold.
 
+Only a ship, structure or container can be a fit's hull. Check that
+`catalog.typeById(typeId)` gives a type, and that `canBeHull(type.kind)` is true,
+before you use it as one.
+
 ## Tests
 
 The test cases live in [esf-format](https://github.com/EVEShipFit/esf-format).

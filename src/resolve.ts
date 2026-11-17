@@ -1,6 +1,7 @@
 // Resolving names against the Catalog, and the semantic rules (SPEC §4.2, §5, §6).
 
 import {
+  canBeHull,
   modesOf,
   mutaplasmidsOf,
   type AttributeRecord,
@@ -127,7 +128,7 @@ function resolveHull(block: FitBlock, catalog: Catalog): Fit {
 
   const line = block.hullLine;
   const hull = lookup(catalog, block.hull, line);
-  if (hull.kind !== "hull" && hull.kind !== "container") {
+  if (!canBeHull(hull.kind)) {
     throw new EsfError(`${repr(hull.name)} is not a ship, structure or container`, { line });
   }
   fit.hull = hull;
@@ -180,7 +181,7 @@ function resolveLine(
   };
 
   if (line.fitName !== undefined) {
-    if (kind !== "hull" && kind !== "container") {
+    if (!canBeHull(kind)) {
       throw new EsfError(`${repr(type.name)} cannot take a fit name`, where);
     }
     const matches = named.get(fitKey(type.id, line.fitName)) ?? [];
