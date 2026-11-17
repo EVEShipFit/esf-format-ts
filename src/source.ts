@@ -3,7 +3,14 @@
 import type { Catalog } from "./catalog.ts";
 import { formatNumber } from "./number.ts";
 import { quote, quoteType } from "./canonical.ts";
-import { EsfError, type Where } from "./errors.ts";
+import {
+  at,
+  EsfCatalogError,
+  EsfError,
+  EsfFormatError,
+  EsfRuleError,
+  type Where,
+} from "./errors.ts";
 import type { Entry, EsfFit } from "./model.ts";
 import type { Fit } from "./resolve.ts";
 import { isRack, isStored } from "./text.ts";
@@ -12,7 +19,7 @@ const STATES: readonly string[] = ["off", "on", "heat"];
 
 function name(text: string): string {
   if (text.includes("\r") || text.includes("\n")) {
-    throw new EsfError("a fit name contains CR or LF");
+    throw new EsfFormatError("a fit name contains CR or LF");
   }
   return quote(text);
 }
@@ -20,40 +27,40 @@ function name(text: string): string {
 function typeName(catalog: Catalog, typeId: number, what: string): string {
   const type = catalog.typeById(typeId);
   if (type === undefined) {
-    throw new EsfError(`unknown ${what} type ID ${String(typeId)}`);
+    throw new EsfCatalogError(`unknown ${what} type ID ${String(typeId)}`);
   }
   return quoteType(type.name);
 }
 
 function count(n: number): string {
   if (!Number.isInteger(n) || n < 1) {
-    throw new EsfError(`a count must be a whole number of at least 1, not ${String(n)}`);
+    throw new EsfRuleError(`a count must be a whole number of at least 1, not ${String(n)}`);
   }
   return `${String(n)}x`;
 }
 
 function value(n: number): string {
   if (!Number.isFinite(n)) {
-    throw new EsfError("an override value is not finite");
+    throw new EsfRuleError("an override value is not finite");
   }
   return formatNumber(n);
 }
 
 function entryText(e: Entry, catalog: Catalog): string {
   if (e.location != null && !isRack(e.location) && !isStored(e.location)) {
-    throw new EsfError(`unknown location ${String(e.location)}`);
+    throw new EsfRuleError(`unknown location ${String(e.location)}`);
   }
   if (e.slot != null && (!Number.isSafeInteger(e.slot) || e.slot < 1)) {
-    throw new EsfError(`a slot must be a whole number of at least 1, not ${String(e.slot)}`);
+    throw new EsfRuleError(`a slot must be a whole number of at least 1, not ${String(e.slot)}`);
   }
   if (e.slot != null && (e.location == null || !isRack(e.location))) {
-    throw new EsfError("a slot needs the rack it is in");
+    throw new EsfRuleError("a slot needs the rack it is in");
   }
   if (e.type != null && e.slot == null && e.location != null && isRack(e.location)) {
-    throw new EsfError("an item names a rack only to pin a slot");
+    throw new EsfRuleError("an item names a rack only to pin a slot");
   }
   if (e.chargeCount != null && e.charge == null) {
-    throw new EsfError("a charge count is set without a charge");
+    throw new EsfRuleError("a charge count is set without a charge");
   }
 
   const parts: string[] = [];
@@ -76,7 +83,7 @@ function entryText(e: Entry, catalog: Catalog): string {
     const pairs = overrides.map(([id, v]) => {
       const attribute = catalog.attributeById(Number(id));
       if (attribute === undefined) {
-        throw new EsfError(`unknown attribute ID ${id}`);
+        throw new EsfCatalogError(`unknown attribute ID ${id}`);
       }
       return `${attribute.name} ${value(v)}`;
     });
@@ -84,7 +91,7 @@ function entryText(e: Entry, catalog: Catalog): string {
   }
   if (e.state != null) {
     if (!STATES.includes(e.state)) {
-      throw new EsfError(`unknown state ${e.state}`);
+      throw new EsfRuleError(`unknown state ${e.state}`);
     }
     parts.push(`!${e.state}`);
   }
@@ -105,28 +112,28 @@ function hullText(fit: EsfFit, catalog: Catalog): string {
   return hull.join(" ");
 }
 
-function at(where: Where, run: () => void): void {
+function located(where: Where, run: () => void): void {
   try {
     run();
   } catch (e) {
-    throw e instanceof EsfError ? new EsfError(e.reason, where) : e;
+    throw e instanceof EsfError ? at(e, where) : e;
   }
 }
 
 /** The text document the fits stand for, and the fit and entry each line is. */
 export function source(fits: readonly EsfFit[], catalog: Catalog): [string, Where[]] {
   if (fits.length === 0) {
-    throw new EsfError("a document holds at least one fit");
+    throw new EsfFormatError("a document holds at least one fit");
   }
   const out: string[] = [];
   const where: Where[] = [];
   fits.forEach((f, i) => {
     const fit = { fit: i + 1 };
-    at(fit, () => out.push("%esf/1", hullText(f, catalog)));
+    located(fit, () => out.push("%esf/1", hullText(f, catalog)));
     where.push(fit, fit);
     f.entries.forEach((e, j) => {
       const entry = { fit: i + 1, entry: j + 1 };
-      at(entry, () => out.push(entryText(e, catalog)));
+      located(entry, () => out.push(entryText(e, catalog)));
       where.push(entry);
     });
   });
@@ -137,7 +144,7 @@ export function source(fits: readonly EsfFit[], catalog: Catalog): [string, Wher
 function same(got: { id: number } | undefined, want: number | undefined | null, what: string) {
   const id = got?.id;
   if (id !== (want ?? undefined)) {
-    throw new EsfError(
+    throw new EsfRuleError(
       `${what} ID ${String(want)} is not what its name resolves to (${String(id)})`,
     );
   }
@@ -147,7 +154,7 @@ function same(got: { id: number } | undefined, want: number | undefined | null, 
 export function verify(resolved: readonly Fit[], fits: readonly EsfFit[]): void {
   resolved.forEach((fit, i) => {
     const given = fits[i] as EsfFit;
-    at({ fit: i + 1 }, () => {
+    located({ fit: i + 1 }, () => {
       same(fit.hull, given.hull, "hull");
       same(fit.mode, given.mode, "tactical mode");
     });
@@ -156,14 +163,14 @@ export function verify(resolved: readonly Fit[], fits: readonly EsfFit[]): void 
         return;
       }
       const entry = given.entries[j] as Entry;
-      at({ fit: i + 1, entry: j + 1 }, () => {
+      located({ fit: i + 1, entry: j + 1 }, () => {
         same(item.type, entry.type, "type");
         same(item.charge, entry.charge, "charge");
         same(item.mutaplasmid?.type, entry.mutaplasmid, "mutaplasmid");
         const got = item.overrides.map(([a]) => a.id).join(", ");
         const want = Object.keys(entry.overrides ?? {}).join(", ");
         if (got !== want) {
-          throw new EsfError(`attribute IDs [${want}] resolve to [${got}]`);
+          throw new EsfRuleError(`attribute IDs [${want}] resolve to [${got}]`);
         }
       });
     });

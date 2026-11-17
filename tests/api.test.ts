@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 import {
   canBeHull,
+  EsfCatalogError,
   EsfError,
+  EsfFormatError,
+  EsfRuleError,
   fold,
   fromBase64url,
   isText,
@@ -238,7 +241,8 @@ test("save errors name the fit and entry", () => {
   );
   expect([error.fit, error.entry, error.line]).toStrictEqual([2, 2, undefined]);
   expect(error.message).toMatch(/^fit 2, entry 2: /);
-  expect(error.name).toBe("EsfError");
+  expect(error).toBeInstanceOf(EsfCatalogError);
+  expect(error.name).toBe("EsfCatalogError");
 });
 
 test("save errors name the fit", () => {
@@ -247,6 +251,13 @@ test("save errors name the fit", () => {
   );
   expect([error.fit, error.entry]).toStrictEqual([2, undefined]);
   expect(error.message).toMatch(/^fit 2: /);
+  expect(error).toBeInstanceOf(EsfCatalogError);
+});
+
+test("save errors found while resolving name the fit", () => {
+  const error = caught(() => save([fit(), { hull: EMP, entries: [] }], catalog));
+  expect(error.message).toBe("fit 2: 'Republic Fleet EMP S' is not a ship, structure or container");
+  expect(error).toBeInstanceOf(EsfRuleError);
 });
 
 test("load errors name the line", () => {
@@ -254,6 +265,18 @@ test("load errors name the line", () => {
   expect(error.line).toBe(3);
   expect(error.reason).toBe("unknown type 'Not A Type'");
   expect(error.message).toBe("line 3: unknown type 'Not A Type'");
+  expect(error).toBeInstanceOf(EsfCatalogError);
+});
+
+test("errors are of one kind", () => {
+  expect(() => load("%esf/1\n2x Rifter\n", catalog)).toThrow(EsfFormatError);
+  expect(() => load(new Uint8Array([0x0a]), catalog)).toThrow(EsfFormatError);
+  expect(() => load("%esf/1\nRifter\nDamage Control II {nope 1}\n", catalog)).toThrow(
+    EsfCatalogError,
+  );
+  expect(() => load("%esf/1\nRifter\nDamage Control II @bay\n", catalog)).toThrow(EsfRuleError);
+  expect(() => save([fit({ type: AUTOCANNON, count: 0 })], catalog)).toThrow(EsfRuleError);
+  expect(() => save([named("a\nb")], catalog)).toThrow(EsfFormatError);
 });
 
 test("an empty name is no name", () => {
@@ -356,6 +379,7 @@ describe("base64url", () => {
 
   test.each(["not base64url!", "AA==", "AAAAA", "AAé"])("rejects %j", (encoded) => {
     expect(() => fromBase64url(encoded)).toThrow("not valid base64url");
+    expect(() => fromBase64url(encoded)).toThrow(EsfFormatError);
   });
 });
 

@@ -1,7 +1,7 @@
 // The binary form (SPEC §10).
 
 import { lines, type CanonFit, type CanonLine } from "./canonical.ts";
-import { EsfError } from "./errors.ts";
+import { EsfError, EsfFormatError, EsfRuleError } from "./errors.ts";
 import {
   compact,
   type Entry,
@@ -86,7 +86,7 @@ export function encode(fits: readonly CanonFit[]): Uint8Array {
 
 function uint32(value: number, what: string): number {
   if (value > UINT32_MAX) {
-    throw new EsfError(`binary: ${what} is out of range`);
+    throw new EsfFormatError(`binary: ${what} is out of range`);
   }
   return value;
 }
@@ -98,7 +98,7 @@ function string(reader: Reader, what: string): string | undefined {
     if (e instanceof EsfError) {
       throw e;
     }
-    throw new EsfError(`binary: ${what} is not valid UTF-8`);
+    throw new EsfFormatError(`binary: ${what} is not valid UTF-8`);
   }
 }
 
@@ -108,13 +108,13 @@ function enumValue<T>(names: readonly T[], value: number, what: string): T | und
   }
   const name = names[value - 1];
   if (name === undefined) {
-    throw new EsfError(`binary: unknown ${what} value ${String(value)}`);
+    throw new EsfFormatError(`binary: unknown ${what} value ${String(value)}`);
   }
   return name;
 }
 
-function notInSchema(what: string): EsfError {
-  return new EsfError(`binary: ${what} has a field that is not in the schema`);
+function notInSchema(what: string): EsfFormatError {
+  return new EsfFormatError(`binary: ${what} has a field that is not in the schema`);
 }
 
 function decodeEntry(reader: Reader): Entry {
@@ -166,13 +166,13 @@ function decodeEntry(reader: Reader): Entry {
     }
   }
   if (attributes.length !== values.length) {
-    throw new EsfError("binary: override fields have different lengths");
+    throw new EsfFormatError("binary: override fields have different lengths");
   }
   if (attributes.length > 0) {
     const overrides: Record<number, number> = {};
     attributes.forEach((id, i) => {
       if (id in overrides) {
-        throw new EsfError("binary: an attribute is overridden twice");
+        throw new EsfRuleError("binary: an attribute is overridden twice");
       }
       overrides[id] = values[i] as number;
     });
@@ -206,7 +206,7 @@ function decodeFit(reader: Reader): EsfFit {
     }
   }
   if (version !== 1) {
-    throw new EsfError(`binary: unsupported Fit.version ${String(version)}`);
+    throw new EsfFormatError(`binary: unsupported Fit.version ${String(version)}`);
   }
   return compact(fit);
 }
@@ -219,13 +219,13 @@ export function decode(data: Uint8Array): EsfFit[] {
     if (key >>> 3 !== 1) {
       reader.skip(key);
     } else if (key !== tag(1, LEN)) {
-      throw new EsfError("binary: Document.fits has the wrong wire type");
+      throw new EsfFormatError("binary: Document.fits has the wrong wire type");
     } else {
       fits.push(decodeFit(reader.message()));
     }
   }
   if (fits.length === 0) {
-    throw new EsfError("binary: a document holds at least one fit");
+    throw new EsfFormatError("binary: a document holds at least one fit");
   }
   return fits;
 }

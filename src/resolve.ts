@@ -10,7 +10,7 @@ import {
   type MutaplasmidRecord,
   type TypeRecord,
 } from "./catalog.ts";
-import { EsfError } from "./errors.ts";
+import { EsfCatalogError, EsfRuleError } from "./errors.ts";
 import type { Rack } from "./model.ts";
 import { fold, isWordPrefix } from "./names.ts";
 import {
@@ -90,7 +90,7 @@ export function modeName(hull: TypeRecord, mode: TypeRecord): string {
 function lookup(catalog: Catalog, name: string, line: number): TypeRecord {
   const type = catalog.type(fold(name));
   if (type === undefined) {
-    throw new EsfError(`unknown type ${repr(name)}`, { line });
+    throw new EsfCatalogError(`unknown type ${repr(name)}`, { line });
   }
   return type;
 }
@@ -104,11 +104,11 @@ function pick<T>(
 ): T {
   const [first] = candidates;
   if (first === undefined) {
-    throw new EsfError(`no ${what} matches ${repr(given)}`, { line });
+    throw new EsfCatalogError(`no ${what} matches ${repr(given)}`, { line });
   }
   if (candidates.length > 1) {
     const names = candidates.map((c) => repr(name(c))).join(", ");
-    throw new EsfError(`${repr(given)} matches more than one ${what}: ${names}`, { line });
+    throw new EsfCatalogError(`${repr(given)} matches more than one ${what}: ${names}`, { line });
   }
   return first;
 }
@@ -129,7 +129,7 @@ function resolveHull(block: FitBlock, catalog: Catalog): Fit {
   const line = block.hullLine;
   const hull = lookup(catalog, block.hull, line);
   if (!canBeHull(hull.kind)) {
-    throw new EsfError(`${repr(hull.name)} is not a ship, structure or container`, { line });
+    throw new EsfRuleError(`${repr(hull.name)} is not a ship, structure or container`, { line });
   }
   fit.hull = hull;
   fit.cargoOnly = hull.kind === "container";
@@ -138,7 +138,7 @@ function resolveHull(block: FitBlock, catalog: Catalog): Fit {
   if (given !== undefined) {
     const modes = modesOf(catalog, hull);
     if (modes.length === 0) {
-      throw new EsfError(`${repr(hull.name)} has no tactical modes`, { line });
+      throw new EsfRuleError(`${repr(hull.name)} has no tactical modes`, { line });
     }
     const matches = modes.filter(
       (m) => isWordPrefix(given, m.name) || isWordPrefix(given, modeName(hull, m)),
@@ -158,7 +158,7 @@ function resolveLine(
   const where = { line: line.number };
   if (line.kind === "empty") {
     if (fit.cargoOnly) {
-      throw new EsfError("a fit without a ship has no slots to keep empty", where);
+      throw new EsfRuleError("a fit without a ship has no slots to keep empty", where);
     }
     return { kind: "empty", line, place: line.rack };
   }
@@ -166,7 +166,7 @@ function resolveLine(
   const type = lookup(catalog, line.name, line.number);
   const kind = type.kind;
   if (kind === "mode") {
-    throw new EsfError("a tactical mode is only written on the hull line", where);
+    throw new EsfRuleError("a tactical mode is only written on the hull line", where);
   }
 
   const item: Item = {
@@ -182,46 +182,46 @@ function resolveLine(
 
   if (line.fitName !== undefined) {
     if (!canBeHull(kind)) {
-      throw new EsfError(`${repr(type.name)} cannot take a fit name`, where);
+      throw new EsfRuleError(`${repr(type.name)} cannot take a fit name`, where);
     }
     const matches = named.get(fitKey(type.id, line.fitName)) ?? [];
     if (matches.length !== 1) {
       const what = matches.length === 0 ? "no fit" : "more than one fit";
-      throw new EsfError(`${what} matches ${type.name} ${repr(line.fitName)}`, where);
+      throw new EsfRuleError(`${what} matches ${type.name} ${repr(line.fitName)}`, where);
     }
     item.reference = matches[0];
   }
 
   if (line.location !== undefined) {
     if (fit.cargoOnly && line.location !== "cargo") {
-      throw new EsfError("a fit without a ship stores everything in cargo", where);
+      throw new EsfRuleError("a fit without a ship stores everything in cargo", where);
     }
     if (line.index !== undefined && DEFAULT_PLACES[kind] !== line.location) {
-      throw new EsfError(`${repr(type.name)} does not go in the ${line.location} rack`, where);
+      throw new EsfRuleError(`${repr(type.name)} does not go in the ${line.location} rack`, where);
     }
     if (line.location === "bay" && kind !== "drone" && kind !== "fighter") {
-      throw new EsfError("@bay is only for drones and fighters", where);
+      throw new EsfRuleError("@bay is only for drones and fighters", where);
     }
     item.place = line.location;
   }
 
   if (isPlugged(item.place) && line.count !== undefined) {
-    throw new EsfError("a plugged-in implant or booster takes no count", where);
+    throw new EsfRuleError("a plugged-in implant or booster takes no count", where);
   }
 
   if (line.state !== undefined) {
     if (isStored(item.place)) {
-      throw new EsfError("a stored item has no state", where);
+      throw new EsfRuleError("a stored item has no state", where);
     }
     if (isPlugged(item.place) && line.state !== "off") {
-      throw new EsfError("an implant or booster takes !off only", where);
+      throw new EsfRuleError("an implant or booster takes !off only", where);
     }
   }
 
   if (line.charge !== undefined) {
     item.charge = lookup(catalog, line.charge, line.number);
     if (item.charge.kind !== "charge") {
-      throw new EsfError(`${repr(item.charge.name)} is not a charge`, where);
+      throw new EsfRuleError(`${repr(item.charge.name)} is not a charge`, where);
     }
   }
 
@@ -238,15 +238,15 @@ function resolveLine(
   for (const [name, value] of line.overrides) {
     const attribute = catalog.attribute(fold(name));
     if (attribute === undefined) {
-      throw new EsfError(`unknown attribute ${repr(name)}`, where);
+      throw new EsfCatalogError(`unknown attribute ${repr(name)}`, where);
     }
     if (seen.has(attribute.id)) {
-      throw new EsfError(`attribute ${repr(attribute.name)} is overridden twice`, where);
+      throw new EsfRuleError(`attribute ${repr(attribute.name)} is overridden twice`, where);
     }
     seen.add(attribute.id);
     const number = Number(value);
     if (!Number.isFinite(number)) {
-      throw new EsfError(`value ${repr(value)} is out of range`, where);
+      throw new EsfRuleError(`value ${repr(value)} is out of range`, where);
     }
     item.overrides.push([attribute, number]);
   }
@@ -282,7 +282,7 @@ function checkCycles(fits: readonly Fit[]): void {
       const item = next.value;
       const ref = item.reference as Fit;
       if (path.has(ref)) {
-        throw new EsfError("a fit cannot contain itself", { line: item.line.number });
+        throw new EsfRuleError("a fit cannot contain itself", { line: item.line.number });
       }
       if (!done.has(ref)) {
         path.add(ref);
@@ -320,7 +320,7 @@ function layout(items: readonly (Item | EmptySlot)[]): Run[] {
       continue;
     }
     if (pinned.has(index)) {
-      throw new EsfError(`slot ${String(index)} is pinned twice`, { line: item.line.number });
+      throw new EsfRuleError(`slot ${String(index)} is pinned twice`, { line: item.line.number });
     }
     pinned.set(index, item);
   }
@@ -384,7 +384,7 @@ export function resolve(blocks: readonly FitBlock[], catalog: Catalog): Fit[] {
         continue;
       }
       if (plugged.has(item.type.id)) {
-        throw new EsfError(`${repr(item.type.name)} is plugged in twice`, {
+        throw new EsfRuleError(`${repr(item.type.name)} is plugged in twice`, {
           line: item.line.number,
         });
       }

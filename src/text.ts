@@ -1,6 +1,6 @@
 // Reading the text form into lines, without a Catalog (SPEC §4.1, grammar.ebnf).
 
-import { EsfError } from "./errors.ts";
+import { EsfFormatError } from "./errors.ts";
 import type { Hold, Rack, State } from "./model.ts";
 
 export type Stored = "cargo" | "bay" | Hold;
@@ -93,7 +93,7 @@ class Cursor {
   }
 
   error(message: string): never {
-    throw new EsfError(message, { line: this.number });
+    throw new EsfFormatError(message, { line: this.number });
   }
 
   peek(): string {
@@ -442,7 +442,7 @@ export function decode(data: Uint8Array): string {
       start = end + 1;
       end = data.indexOf(0x0a, start);
     }
-    throw new EsfError("not valid UTF-8", { line });
+    throw new EsfFormatError("not valid UTF-8", { line });
   }
 }
 
@@ -454,7 +454,7 @@ export function parse(text: string): FitBlock[] {
   }
   if (!text.isWellFormed()) {
     const line = lines.findIndex((line) => !line.isWellFormed()) + 1;
-    throw new EsfError("not valid UTF-8", { line });
+    throw new EsfFormatError("not valid UTF-8", { line });
   }
 
   const fits: FitBlock[] = [];
@@ -465,22 +465,24 @@ export function parse(text: string): FitBlock[] {
     const number = i + 1;
     const raw = line.endsWith("\r") ? line.slice(0, -1) : line;
     if (raw.includes("\r")) {
-      throw new EsfError("a CR must be followed by an LF", { line: number });
+      throw new EsfFormatError("a CR must be followed by an LF", { line: number });
     }
 
     if (trimSpaces(raw).startsWith("%")) {
       const match = HEADER.exec(raw);
       if (match === null) {
-        throw new EsfError("malformed header", { line: number });
+        throw new EsfFormatError("malformed header", { line: number });
       }
       if (header !== undefined) {
-        throw new EsfError("a fit needs a hull line", { line: header });
+        throw new EsfFormatError("a fit needs a hull line", { line: header });
       }
       inBlock = true;
       current = undefined;
       if (match[1] === "esf") {
         if (match[2] !== "1") {
-          throw new EsfError(`unsupported version esf/${match[2] as string}`, { line: number });
+          throw new EsfFormatError(`unsupported version esf/${match[2] as string}`, {
+            line: number,
+          });
         }
         header = number;
       }
@@ -488,7 +490,7 @@ export function parse(text: string): FitBlock[] {
     }
 
     if (!inBlock) {
-      throw new EsfError("a document starts with a header", { line: number });
+      throw new EsfFormatError("a document starts with a header", { line: number });
     }
     if (isBlank(raw)) {
       continue;
@@ -505,10 +507,10 @@ export function parse(text: string): FitBlock[] {
   }
 
   if (header !== undefined) {
-    throw new EsfError("a fit needs a hull line", { line: header });
+    throw new EsfFormatError("a fit needs a hull line", { line: header });
   }
   if (fits.length === 0) {
-    throw new EsfError("a document holds at least one fit");
+    throw new EsfFormatError("a document holds at least one fit");
   }
   return fits;
 }
