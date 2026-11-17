@@ -293,7 +293,7 @@ test("published wins a shared name", () => {
   expect(save([fit({ type: AVATAR, location: "cargo" })], catalog)).toMatch(/Avatar\n$/);
 });
 
-test("a shared name is written by type ID", () => {
+test("a shared name is written with its type ID", () => {
   const rifter = fit({ type: AVATAR_UNPUBLISHED });
   const text = save([rifter], catalog);
   expect(text).toBe("%esf/1\nRifter\n\nAvatar#50097\n");

@@ -34,7 +34,7 @@ export const UINT32_MAX = 0xffffffff;
 
 const COUNT = /^[0-9]+x$/;
 const TYPE_ID = /#([0-9]+)/y;
-const NAME_WITH_ID = /^(.*[^ ])#([0-9]+)$/;
+const NAME_WITH_ID = /^(.*[^ ])#([0-9]+)$/s;
 const HEADER = /^ *%([a-z][a-z0-9-]*)\/([0-9]+) *$/;
 const STATE = /!(off|on|heat)/y;
 const LOCATION = /@([a-z]+)([0-9]*)/y;
