@@ -66,7 +66,9 @@ test("needsQuotes", () => {
   expect(needsQuotes("3x Damage Control")).toBe(true);
   expect(needsQuotes("Damage  Control")).toBe(true);
   expect(needsQuotes("Damage @Control")).toBe(true);
-  expect(needsQuotes("#85282")).toBe(true);
+  expect(needsQuotes("Foo#123")).toBe(true);
+  expect(needsQuotes("#85282")).toBe(false);
+  expect(needsQuotes("Swarm Overmind #0102")).toBe(false);
   expect(needsQuotes("#System")).toBe(false);
 });
 

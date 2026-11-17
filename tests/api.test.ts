@@ -296,15 +296,15 @@ test("published wins a shared name", () => {
 test("a shared name is written by type ID", () => {
   const rifter = fit({ type: AVATAR_UNPUBLISHED });
   const text = save([rifter], catalog);
-  expect(text).toBe("%esf/1\nRifter\n\n#50097\n");
+  expect(text).toBe("%esf/1\nRifter\n\nAvatar#50097\n");
   expect(load(text, catalog)).toStrictEqual([rifter]);
   expect(load(saveBinary([rifter], catalog), catalog)).toStrictEqual([rifter]);
 });
 
 test("load reads a type ID", () => {
-  expect(load("%esf/1\n#587\n#2889 :#21898\n", catalog)).toStrictEqual([
-    fit({ type: AUTOCANNON, charge: EMP }),
-  ]);
+  expect(
+    load("%esf/1\nRifter#587\n200mm AutoCannon II#2889 :Republic Fleet EMP S#21898\n", catalog),
+  ).toStrictEqual([fit({ type: AUTOCANNON, charge: EMP })]);
 });
 
 test.each<[string, string | Uint8Array, string]>([
@@ -322,9 +322,10 @@ test.each<[string, string | Uint8Array, string]>([
     "%esf/1\nRifter\n4294967295x Damage Control II\n4294967295x Damage Control II\n",
     "too large",
   ],
-  ["type ID too large", "%esf/1\nRifter\n#4294967296\n", "type ID is too large"],
-  ["unknown type ID", "%esf/1\nRifter\n#999999999\n", "unknown type ID"],
-  ["largest type ID", "%esf/1\nRifter\n#4294967295\n", "unknown type ID"],
+  ["type ID too large", "%esf/1\nRifter#4294967296\n", "type ID is too large"],
+  ["unknown type ID", "%esf/1\nRifter#999999999\n", "unknown type ID"],
+  ["largest type ID", "%esf/1\nRifter#4294967295\n", "unknown type ID"],
+  ["type ID of another name", "%esf/1\nRifter#605\n", "is 'Heron', not 'Rifter'"],
 ])("load rejects %s", (_, data, message) => {
   expect(() => load(data, catalog)).toThrow(message);
 });

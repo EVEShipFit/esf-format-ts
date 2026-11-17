@@ -24,7 +24,16 @@ import {
   type Place,
   type Run,
 } from "./resolve.ts";
-import { HOLDS, RACKS, SIGILS, UINT32_MAX, isCount, isRack, isStored, isTypeId } from "./text.ts";
+import {
+  HOLDS,
+  RACKS,
+  SIGILS,
+  UINT32_MAX,
+  isCount,
+  isRack,
+  isStored,
+  endsInTypeId,
+} from "./text.ts";
 
 const GROUPS: readonly Place[] = [
   ...RACKS.filter((rack) => rack !== "tube"),
@@ -69,7 +78,7 @@ export function needsQuotes(name: string): boolean {
     name.startsWith("-") ||
     name.startsWith("%") ||
     isCount(words[0] as string) ||
-    isTypeId(name) ||
+    endsInTypeId(name) ||
     words.some((word) => word === "" || SIGILS.includes(word.charAt(0)))
   );
 }
@@ -78,11 +87,10 @@ export function quoteType(name: string): string {
   return needsQuotes(name) ? quote(name) : name;
 }
 
-/** A type as text: its name, or its ID where the name resolves to another type (SPEC §6.13). */
+/** A type as text: its name, and its ID where the name resolves to another type (SPEC §6.13). */
 export function typeRef(catalog: Catalog, type: TypeRecord): string {
-  return catalog.type(fold(type.name))?.id === type.id
-    ? quoteType(type.name)
-    : `#${String(type.id)}`;
+  const name = quoteType(type.name);
+  return catalog.type(fold(type.name))?.id === type.id ? name : `${name}#${String(type.id)}`;
 }
 
 function canonLine(type: TypeRecord | undefined, typeText = "-"): CanonLine {
