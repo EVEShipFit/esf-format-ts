@@ -4,9 +4,10 @@ import * as binary from "./binary.ts";
 import { canonicalFit, render, toModel, type CanonFit } from "./canonical.ts";
 import type { Catalog } from "./catalog.ts";
 import { at, EsfError, EsfFormatError } from "./errors.ts";
-import type { EsfFit } from "./model.ts";
+import type { Document, EsfFit } from "./model.ts";
 import { resolve } from "./resolve.ts";
 import { source, verify } from "./source.ts";
+import { Writer } from "./wire.ts";
 import { decode, parse, type FitBlock } from "./text.ts";
 
 export {
@@ -18,7 +19,7 @@ export {
   type TypeRecord,
 } from "./catalog.ts";
 export { EsfCatalogError, EsfError, EsfFormatError, EsfRuleError, type Where } from "./errors.ts";
-export type { Entry, EsfFit, Hold, Location, Rack, State } from "./model.ts";
+export type { Document, Entry, EsfFit, Extra, Hold, Location, Rack, State } from "./model.ts";
 export { fold } from "./names.ts";
 export * as esi from "./esi.ts";
 /**
@@ -52,7 +53,7 @@ function canonical(blocks: FitBlock[], catalog: Catalog, given?: readonly EsfFit
 function checked(fits: readonly EsfFit[], catalog: Catalog): CanonFit[] {
   const [text, where] = source(fits, catalog);
   try {
-    return canonical(parse(text), catalog, fits);
+    return canonical(parse(text).fits, catalog, fits);
   } catch (e) {
     if (e instanceof EsfError && e.line !== undefined) {
       throw at(e, where[e.line - 1]);
@@ -63,15 +64,52 @@ function checked(fits: readonly EsfFit[], catalog: Catalog): CanonFit[] {
 
 /** Read a text or binary document, in canonical form. */
 export function load(data: Uint8Array | string, catalog: Catalog): EsfFit[] {
+  return read(data, catalog, false).fits;
+}
+
+/**
+ * Read a text or binary document, like `load`, and also return what `load` skips.
+ *
+ * `fits` is what `load` returns. `extra` holds the text blocks and binary fields that are not
+ * fits, in the order they appear in the document; see `Extra`. It is empty when there are
+ * none. To write extras back, append them to the output of `save` or `saveBinary`: for text,
+ * a header line like `%fleet/1` and then the text; for binary, the output of `binaryField`.
+ *
+ * A text block's version must be at most 4294967295. `loadDocument` throws an
+ * `EsfFormatError` for a larger one, where `load` skips the block.
+ */
+export function loadDocument(data: Uint8Array | string, catalog: Catalog): Document {
+  return read(data, catalog, true);
+}
+
+function read(data: Uint8Array | string, catalog: Catalog, extras: boolean): Document {
   if (data.length === 0) {
     throw new EsfFormatError("the document is empty");
   }
   if (isText(data)) {
     const text = typeof data === "string" ? data : decode(data);
-    return canonical(parse(text), catalog).map(toModel);
+    const { fits, extra } = parse(text, extras);
+    return { fits: canonical(fits, catalog).map(toModel), extra };
   }
   const bytes = typeof data === "string" ? ENCODER.encode(data) : data;
-  return checked(binary.decode(bytes), catalog).map(toModel);
+  const { fits, extra } = binary.decode(bytes);
+  return { fits: checked(fits, catalog).map(toModel), extra };
+}
+
+/**
+ * Encode `bytes` as field number `field` of a binary document.
+ *
+ * Append the result to the output of `saveBinary` to store extra data next to the fits;
+ * `loadDocument` returns it as a `"binary"` extra. Field 1 holds the fits, so `field` must be
+ * a whole number from 2 to 536870911. Any other number throws a `RangeError`.
+ */
+export function binaryField(field: number, bytes: Uint8Array): Uint8Array {
+  if (!Number.isInteger(field) || field < 2 || field > 0x1fffffff) {
+    throw new RangeError(`field must be a whole number from 2 to 536870911, not ${String(field)}`);
+  }
+  const out = new Writer();
+  out.bytes(field, bytes);
+  return out.finish();
 }
 
 /** Write fits as canonical text (§8). */

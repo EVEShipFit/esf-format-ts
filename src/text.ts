@@ -1,7 +1,7 @@
 // Reading the text form into lines, without a Catalog (SPEC §4.1, grammar.ebnf).
 
 import { EsfFormatError } from "./errors.ts";
-import type { Hold, Rack, State } from "./model.ts";
+import type { Extra, Hold, Rack, State } from "./model.ts";
 
 export type Stored = "cargo" | "bay" | Hold;
 
@@ -480,8 +480,13 @@ export function decode(data: Uint8Array): string {
   }
 }
 
-/** Split a text document into fits; other blocks are skipped. */
-export function parse(text: string): FitBlock[] {
+export interface Parsed {
+  fits: FitBlock[];
+  extra: Extra[];
+}
+
+/** Split a text document into fits, and with `extras` the other blocks too. */
+export function parse(text: string, extras = false): Parsed {
   const lines = text.split("\n");
   if (lines.at(-1) === "") {
     lines.pop();
@@ -492,11 +497,23 @@ export function parse(text: string): FitBlock[] {
   }
 
   const fits: FitBlock[] = [];
+  const extra: Extra[] = [];
+  let other: { name: string; version: number; start: number } | undefined;
+  const closeOther = (end: number): void => {
+    if (other !== undefined) {
+      const { name, version, start } = other;
+      extra.push({ kind: "text", name, version, text: text.slice(start, end) });
+      other = undefined;
+    }
+  };
   let current: FitBlock | undefined;
   let header: number | undefined;
   let inBlock = false;
+  let offset = 0;
   for (const [i, line] of lines.entries()) {
     const number = i + 1;
+    const lineStart = offset;
+    offset += line.length + 1;
     const raw = line.endsWith("\r") ? line.slice(0, -1) : line;
     if (raw.includes("\r")) {
       throw new EsfFormatError("a CR must be followed by an LF", { line: number });
@@ -512,13 +529,21 @@ export function parse(text: string): FitBlock[] {
       }
       inBlock = true;
       current = undefined;
-      if (match[1] === "esf") {
-        if (match[2] !== "1") {
-          throw new EsfFormatError(`unsupported version esf/${match[2] as string}`, {
+      closeOther(lineStart);
+      const name = match[1] as string;
+      const version = match[2] as string;
+      if (name === "esf") {
+        if (version !== "1") {
+          throw new EsfFormatError(`unsupported version esf/${version}`, { line: number });
+        }
+        header = number;
+      } else if (extras) {
+        if (Number(version) > UINT32_MAX) {
+          throw new EsfFormatError(`version ${name}/${version} is out of range`, {
             line: number,
           });
         }
-        header = number;
+        other = { name, version: Number(version), start: Math.min(offset, text.length) };
       }
       continue;
     }
@@ -540,11 +565,13 @@ export function parse(text: string): FitBlock[] {
     }
   }
 
+  closeOther(text.length);
+
   if (header !== undefined) {
     throw new EsfFormatError("a fit needs a hull line", { line: header });
   }
   if (fits.length === 0) {
     throw new EsfFormatError("a document holds at least one fit");
   }
-  return fits;
+  return { fits, extra };
 }

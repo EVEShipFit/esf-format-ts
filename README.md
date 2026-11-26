@@ -59,6 +59,35 @@ Catch a subclass to handle one kind of error:
 | `EsfCatalogError` | The catalog does not know a name or ID, or a name matches more than one type.                                   |
 | `EsfRuleError`    | The fit breaks a rule, like a module in the wrong rack.                                                         |
 
+## Extra data
+
+A document can hold more than fits: a text block with another header, like
+`%fleet/1`, or another field in the binary form. `load()` skips these.
+`loadDocument()` returns them too:
+
+```ts
+import { binaryField, loadDocument, save, saveBinary } from "@eveshipfit/esf-format";
+
+const { fits, extra } = loadDocument(data, catalog);
+for (const e of extra) {
+  if (e.kind === "text") {
+    // e.name is "fleet", e.version is 1, e.text is the block after its header line
+  } else {
+    // e.field is the field number, e.bytes its content
+  }
+}
+
+// To write extra data, append it.
+const text = save(fits, catalog) + "%fleet/1\n" + fleetText;
+const data = new Uint8Array([...saveBinary(fits, catalog), ...binaryField(2, fleetBytes)]);
+```
+
+`extra` is in document order, and empty when there is none. Only
+length-delimited binary fields come back. `binaryField()` takes a field
+number from 2 to 536870911, and throws a `RangeError` for any other.
+`loadDocument()` throws an `EsfFormatError` for a text block whose version is
+above 4294967295; `load()` skips that block.
+
 ## Fits
 
 An `EsfFit` is one fit: `hull`, `name`, tactical `mode` and its `entries`.

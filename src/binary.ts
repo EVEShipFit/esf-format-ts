@@ -6,6 +6,7 @@ import {
   compact,
   type Entry,
   type EsfFit,
+  type Extra,
   type Loose,
   type Location,
   type State,
@@ -211,12 +212,15 @@ function decodeFit(reader: Reader): EsfFit {
   return compact(fit);
 }
 
-export function decode(data: Uint8Array): EsfFit[] {
+export function decode(data: Uint8Array): { fits: EsfFit[]; extra: Extra[] } {
   const reader = new Reader(data);
   const fits: EsfFit[] = [];
+  const extra: Extra[] = [];
   while (!reader.done()) {
     const key = reader.key();
-    if (key >>> 3 !== 1) {
+    if (key >>> 3 !== 1 && (key & 7) === LEN) {
+      extra.push({ kind: "binary", field: key >>> 3, bytes: reader.bytes().slice() });
+    } else if (key >>> 3 !== 1) {
       reader.skip(key);
     } else if (key !== tag(1, LEN)) {
       throw new EsfFormatError("binary: Document.fits has the wrong wire type");
@@ -227,5 +231,5 @@ export function decode(data: Uint8Array): EsfFit[] {
   if (fits.length === 0) {
     throw new EsfFormatError("binary: a document holds at least one fit");
   }
-  return fits;
+  return { fits, extra };
 }
