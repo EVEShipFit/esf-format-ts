@@ -10,7 +10,7 @@ export const EGROUP = 4;
 export const I32 = 5;
 
 export function tag(field: number, wire: number): number {
-  return (field << 3) | wire;
+  return field * 8 + wire;
 }
 
 function invalid(why: string): EsfFormatError {
@@ -50,7 +50,10 @@ export class Writer {
   }
 
   string(field: number, value: string): void {
-    const bytes = ENCODER.encode(value);
+    this.bytes(field, ENCODER.encode(value));
+  }
+
+  bytes(field: number, bytes: Uint8Array): void {
     this.varint(tag(field, LEN));
     this.varint(bytes.length);
     this.reserve(bytes.length);

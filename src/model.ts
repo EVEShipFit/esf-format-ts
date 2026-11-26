@@ -193,3 +193,25 @@ export interface EsfFit {
   /** The lines of the fit: items, empty slots and fits it carries. */
   entries: Entry[];
 }
+
+/**
+ * Data in a document that is not a fit. `load` skips it; `loadDocument` hands it back.
+ *
+ * A `"text"` extra is a block in a text document whose header is not `%esf/N`, like
+ * `%fleet/1`. `name` and `version` come from its header. `text` is everything after the
+ * header line, up to the next header or the end of the document, exactly as written. It may
+ * be empty.
+ *
+ * A `"binary"` extra is a field of a binary document other than its fits. `field` is its
+ * field number and `bytes` its content. Only length-delimited fields come back; other
+ * fields are skipped.
+ */
+export type Extra =
+  | { kind: "text"; name: string; version: number; text: string }
+  | { kind: "binary"; field: number; bytes: Uint8Array };
+
+/** A whole document: its fits, and the extras it holds next to them, in document order. */
+export interface Document {
+  fits: EsfFit[];
+  extra: Extra[];
+}

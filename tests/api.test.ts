@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  binaryField,
   canBeHull,
   EsfCatalogError,
   EsfError,
@@ -9,6 +10,7 @@ import {
   fromBase64url,
   isText,
   load,
+  loadDocument,
   save,
   saveBinary,
   toBase64url,
@@ -504,4 +506,73 @@ test("binary inside a larger buffer", () => {
   const buffer = new Uint8Array(data.length + 3);
   buffer.set(data, 3);
   expect(load(buffer.subarray(3), catalog)).toStrictEqual(load(data, catalog));
+});
+
+describe("loadDocument", () => {
+  test("without extras", () => {
+    const text = "%esf/1\nRifter\n";
+    expect(loadDocument(text, catalog)).toStrictEqual({ fits: load(text, catalog), extra: [] });
+  });
+
+  test("text blocks in order", () => {
+    const text = "%a/1\nx\r\n%esf/1\nRifter\n %b/2 \n\n%c/3";
+    expect(loadDocument(text, catalog).extra).toStrictEqual([
+      { kind: "text", name: "a", version: 1, text: "x\r\n" },
+      { kind: "text", name: "b", version: 2, text: "\n" },
+      { kind: "text", name: "c", version: 3, text: "" },
+    ]);
+  });
+
+  test("a huge block version", () => {
+    const text = "%esf/1\nRifter\n%fleet/99999999999\n";
+    expect(load(text, catalog)).toStrictEqual(load("%esf/1\nRifter\n", catalog));
+    expect(caught(() => loadDocument(text, catalog))).toBeInstanceOf(EsfFormatError);
+    expect(loadDocument("%esf/1\nRifter\n%fleet/4294967295\n%x/007", catalog).extra).toStrictEqual([
+      { kind: "text", name: "fleet", version: 4294967295, text: "" },
+      { kind: "text", name: "x", version: 7, text: "" },
+    ]);
+  });
+
+  test("an unknown esf version still throws", () => {
+    expect(() => loadDocument("%esf/1\nRifter\n%esf/2\nRifter\n", catalog)).toThrow(EsfFormatError);
+  });
+
+  test("binaryField round trip", () => {
+    const fits = [fit({ type: DAMAGE_CONTROL })];
+    const payload = new Uint8Array(200).fill(7);
+    const data = new Uint8Array([
+      ...saveBinary(fits, catalog),
+      ...binaryField(2, new Uint8Array([1, 2])),
+      ...binaryField(0x1fffffff, payload),
+      ...binaryField(3, new Uint8Array()),
+    ]);
+    const document = loadDocument(data, catalog);
+    expect(document.fits).toStrictEqual(load(saveBinary(fits, catalog), catalog));
+    expect(document.extra).toStrictEqual([
+      { kind: "binary", field: 2, bytes: new Uint8Array([1, 2]) },
+      { kind: "binary", field: 0x1fffffff, bytes: payload },
+      { kind: "binary", field: 3, bytes: new Uint8Array() },
+    ]);
+  });
+
+  test("binary extras are copies", () => {
+    const data = new Uint8Array([
+      ...saveBinary([fit()], catalog),
+      ...binaryField(2, new Uint8Array([1])),
+    ]);
+    const [extra] = loadDocument(data, catalog).extra;
+    data[data.length - 1] = 9;
+    expect(extra).toStrictEqual({ kind: "binary", field: 2, bytes: new Uint8Array([1]) });
+  });
+
+  test("other wire types and groups are skipped", () => {
+    // field 2 varint 5; group 3 holding field 4 bytes [1]; end group 3
+    const skipped = new Uint8Array([0x10, 0x05, 0x1b, 0x22, 0x01, 0x01, 0x1c]);
+    const data = new Uint8Array([...saveBinary([fit()], catalog), ...skipped]);
+    expect(loadDocument(data, catalog).extra).toStrictEqual([]);
+  });
+
+  test.each([0, 1, -1, 2.5, 0x20000000, Number.NaN])("binaryField rejects field %d", (field) => {
+    expect(() => binaryField(field, new Uint8Array())).toThrow(RangeError);
+  });
 });
