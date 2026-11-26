@@ -186,7 +186,7 @@ The test cases live in [esf-format](https://github.com/EVEShipFit/esf-format).
 You need Node.js 22.18 or later, and [uv](https://docs.astral.sh/uv/):
 
 ```
-git clone --branch v1.0 https://github.com/EVEShipFit/esf-format
+git clone --branch load-document https://github.com/EVEShipFit/esf-format
 npm ci
 uv run --project esf-format/tools esf-test -- node tests/program.ts
 npm run lint
